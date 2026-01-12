@@ -594,7 +594,7 @@ cell_t propval_cell_n(struct property *prop, unsigned int n)
 	return fdt32_to_cpu(*((fdt32_t *)prop->val.val + n));
 }
 
-struct property *get_property_by_label(struct node *tree, const char *label,
+static struct property *get_property_by_label(struct node *tree, const char *label,
 				       struct node **node)
 {
 	struct property *prop;
@@ -834,6 +834,22 @@ struct node *dti_get_node_by_ref(struct dt_info *dti, const char *ref)
 			return node;
 	}
 
+	return NULL;
+}
+
+struct property *dti_get_property_by_label(struct dt_info *dti,
+					   const char *label,
+					   struct node **node)
+{
+	struct property *property;
+
+	if (dti->dt) {
+		property = get_property_by_label(dti->dt, label, node);
+		if (property)
+			return property;
+	}
+
+	*node = NULL;
 	return NULL;
 }
 

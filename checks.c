@@ -447,7 +447,7 @@ static void check_duplicate_label(struct check *c, struct dt_info *dti,
 	othernode = dti_get_node_by_label(dti, label);
 
 	if (!othernode)
-		otherprop = get_property_by_label(dt, label, &othernode);
+		otherprop = dti_get_property_by_label(dti, label, &othernode);
 	if (!othernode)
 		othermark = get_marker_label(dt, label, &othernode,
 					       &otherprop);
