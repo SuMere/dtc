@@ -159,6 +159,7 @@ BIN += fdtdump
 BIN += fdtget
 BIN += fdtput
 BIN += fdtoverlay
+BIN += fdtaddon
 
 SCRIPTS = dtdiff
 
@@ -172,6 +173,7 @@ ifneq ($(MAKECMDGOALS),libfdt)
 -include $(FDTGET_OBJS:%.o=%.d)
 -include $(FDTPUT_OBJS:%.o=%.d)
 -include $(FDTOVERLAY_OBJS:%.o=%.d)
+-include $(FDTADDON_OBJS:%.o=%.d)
 endif
 endif
 
@@ -255,6 +257,8 @@ fdtput:	$(FDTPUT_OBJS) $(LIBFDT_dep)
 
 fdtoverlay: $(FDTOVERLAY_OBJS) $(LIBFDT_dep)
 
+fdtaddon: $(FDTADDON_OBJS) $(LIBFDT_dep)
+
 dist:
 	git archive --format=tar --prefix=dtc-$(dtc_version)/ HEAD \
 		> ../dtc-$(dtc_version).tar
@@ -295,6 +299,7 @@ TESTS_BIN += fdtput
 TESTS_BIN += fdtget
 TESTS_BIN += fdtdump
 TESTS_BIN += fdtoverlay
+TESTS_BIN += fdtaddon
 
 ifneq ($(MAKECMDGOALS),libfdt)
 include tests/Makefile.tests
