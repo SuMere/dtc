@@ -659,7 +659,7 @@ struct node *get_subnode(struct node *node, const char *nodename)
 	return NULL;
 }
 
-struct node *get_node_by_path(struct node *tree, const char *path)
+static struct node *get_node_by_path(struct node *tree, const char *path)
 {
 	const char *p;
 	struct node *child;
@@ -783,6 +783,19 @@ struct node *get_node_by_ref(struct node *tree, const char *ref)
 		target = get_node_by_path(target, path);
 
 	return target;
+}
+
+struct node *dti_get_node_by_path(struct dt_info *dti, const char *path)
+{
+	struct node *node;
+
+	if (dti->dt) {
+		node = get_node_by_path(dti->dt, path);
+		if (node)
+			return node;
+	}
+
+	return NULL;
 }
 
 static void add_phandle_property(struct node *node,
