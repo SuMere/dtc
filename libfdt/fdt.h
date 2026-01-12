@@ -67,6 +67,7 @@ struct fdt_property {
 #define FDT_EXPORT_SYM	0xa		/* export symbol: name, phandle value */
 #define FDT_EXPORT_SYM_REF 0xb		/* export symbol: name, phandle value (maybe
 					   unresolved), external label */
+#define FDT_IMPORT_SYM	0xc		/* import symbol: name, compatible */
 
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))

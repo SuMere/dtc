@@ -271,6 +271,23 @@ uint32_t fdt_next_tag_full(const void *fdt, int startoffset, int *nextoffset)
 			return FDT_END; /* premature end */
 		break;
 
+	case FDT_IMPORT_SYM:
+		/* Skip name */
+		do {
+			p = fdt_offset_ptr(fdt, offset++, 1);
+		} while (p && (*p != '\0'));
+		if (!can_assume(VALID_DTB) && !p)
+			return FDT_END; /* premature end */
+		offset = FDT_CELLALIGN(offset);
+
+		/* Skip compatible */
+		do {
+			p = fdt_offset_ptr(fdt, offset++, 1);
+		} while (p && (*p != '\0'));
+		if (!can_assume(VALID_DTB) && !p)
+			return FDT_END; /* premature end */
+		break;
+
 	default:
 		return FDT_END;
 	}
@@ -286,6 +303,7 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 {
 	uint32_t tag, tmp_tag;
 	int tmp_offset, tmp_next;
+	int is_skip_to_end = 0;
 
 	/* Retrieve next tag */
 	tag = fdt_next_tag_full(fdt, startoffset, nextoffset);
@@ -300,6 +318,9 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 		case FDT_END_NODE:
 		case FDT_PROP:
 		case FDT_NOP:
+			if (is_skip_to_end)
+				break;
+
 		case FDT_END:
 			/*
 			 * Next tag is not a meta-data tag -> Ok this next tag
@@ -318,6 +339,13 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 			 * Next tag is a meta-data tag present in the middle
 			 * of the structure -> Skip it and look at next one
 			 */
+			break;
+
+		case FDT_IMPORT_SYM:
+			/* Those tags are available at the root level, after the
+			 * root node -> Skip everything until FDT_END
+			 */
+			is_skip_to_end = 1;
 			break;
 
 		default:

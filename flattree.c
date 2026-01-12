@@ -50,6 +50,7 @@ struct emitter {
 	void (*ref_phandle)(void *);
 	void (*export_sym)(void *);
 	void (*export_sym_ref)(void *);
+	void (*import_sym)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -119,6 +120,11 @@ static void bin_emit_export_sym_ref(void *e)
 	bin_emit_cell(e, FDT_EXPORT_SYM_REF);
 }
 
+static void bin_emit_import_sym(void *e)
+{
+	bin_emit_cell(e, FDT_IMPORT_SYM);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -131,6 +137,7 @@ static struct emitter bin_emitter = {
 	.ref_phandle = bin_emit_ref_phandle,
 	.export_sym = bin_emit_export_sym,
 	.export_sym_ref = bin_emit_export_sym_ref,
+	.import_sym = bin_emit_import_sym,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -274,6 +281,17 @@ static void asm_emit_export_sym_ref(void *e)
 	asm_emit_cell(e, FDT_EXPORT_SYM_REF);
 }
 
+static void asm_emit_import_sym(void *e)
+{
+	/*
+	 * Import symbols are an feature introduced for addons.
+	 * Addons device-tree blob have to reason to be in the asm format.
+	 *
+	 * Need to be implemented if really needed.
+	 */
+	die("FDT_IMPORT_SYM not supported in asm output\n");
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -286,6 +304,7 @@ static struct emitter asm_emitter = {
 	.ref_phandle = asm_emit_ref_phandle,
 	.export_sym = asm_emit_export_sym,
 	.export_sym = asm_emit_export_sym_ref,
+	.import_sym = asm_emit_import_sym,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -461,6 +480,26 @@ static void make_fdt_header(struct fdt_header *fdt,
 		fdt->dt_flags = cpu_to_fdt32(dt_flags);
 }
 
+static void flatten_imports(struct symbol *importsymlist, struct emitter *emit,
+			 void *etarget, struct version_info *vi, uint32_t dt_flags)
+{
+	struct symbol *importsym;
+
+	if (!(vi->flags & FTF_EXPORT_IMPORT_SYM))
+		return;
+
+	if (!(dt_flags & FDT_FLAG_ADDON) && importsymlist)
+		die("Only addons can have an import list\n");
+
+	for_each_symbol(importsymlist, importsym) {
+		emit->import_sym(etarget);
+		emit->string(etarget, importsym->name, 0);
+		emit->align(etarget, sizeof(cell_t));
+		emit->string(etarget, importsym->compatible, 0);
+		emit->align(etarget, sizeof(cell_t));
+	}
+}
+
 void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 {
 	struct version_info *vi = NULL;
@@ -483,6 +522,7 @@ void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 	dt_flags |= dti->dtsflags & DTSF_ADDON ? FDT_FLAG_ADDON : 0;
 
 	flatten_tree(dti->dt, &bin_emitter, &dtbuf, &strbuf, vi);
+	flatten_imports(dti->importsymlist, &bin_emitter, &dtbuf, vi, dt_flags);
 	bin_emit_cell(&dtbuf, FDT_END);
 
 	reservebuf = flatten_reserve_list(dti->reservelist, vi);
@@ -573,6 +613,9 @@ void dt_to_asm(FILE *f, struct dt_info *dti, int version)
 	struct reserve_info *re;
 	const char *symprefix = "dt";
 	uint32_t dt_flags = 0;
+
+	if (dti->importsymlist)
+		die("Import symbols not supported in asm format\n");
 
 	for (i = 0; i < ARRAY_SIZE(version_table); i++) {
 		if (version_table[i].version == version)
@@ -810,6 +853,16 @@ static struct property *flat_read_property(struct inbuf *dtbuf,
 	return build_property(name, val, NULL);
 }
 
+static struct symbol *flat_read_importsym(struct inbuf *inb)
+{
+	const char *name;
+	const char *compatible;
+
+	name = flat_read_string(inb);
+	compatible =  flat_read_string(inb);
+
+	return build_importsym(name, compatible, NULL);
+}
 
 static struct reserve_info *flat_read_mem_reserve(struct inbuf *inb)
 {
@@ -984,6 +1037,8 @@ struct dt_info *dt_from_blob(const char *fname)
 	int sizeleft;
 	struct reserve_info *reservelist;
 	struct node *tree;
+	struct symbol *importsymlist = NULL;
+	struct symbol *importsym;
 	uint32_t val;
 	int flags = 0;
 	unsigned int dtsflags = 0;
@@ -1098,6 +1153,17 @@ struct dt_info *dt_from_blob(const char *fname)
 	tree = unflatten_tree(&dtbuf, &strbuf, "", flags);
 
 	val = flat_read_word(&dtbuf);
+
+	if (dtsflags & DTSF_ADDON) {
+		if (flags & FTF_EXPORT_IMPORT_SYM) {
+			while (val == FDT_IMPORT_SYM) {
+				importsym = flat_read_importsym(&dtbuf);
+				add_symbol(&importsymlist, importsym);
+				val = flat_read_word(&dtbuf);
+			}
+		}
+	}
+
 	if (val != FDT_END)
 		die("Device tree blob doesn't end with FDT_END\n");
 
@@ -1105,5 +1171,5 @@ struct dt_info *dt_from_blob(const char *fname)
 
 	fclose(f);
 
-	return build_dt_info(DTSF_V1 | dtsflags, reservelist, tree, boot_cpuid_phys, NULL);
+	return build_dt_info(DTSF_V1 | dtsflags, reservelist, tree, boot_cpuid_phys, importsymlist);
 }

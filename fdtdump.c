@@ -198,6 +198,17 @@ static void dump_blob(void *blob, bool debug)
 			continue;
 		}
 
+		if (tag == FDT_IMPORT_SYM) {
+			s = p;
+			p = PALIGN(p + strlen(s) + 1, 4);
+			t = p;
+			p = PALIGN(p + strlen(t) + 1, 4);
+
+			printf("%*s// [FDT_IMPORT_SYM] '%s' (%s)\n", depth * shift, "",
+				s, t);
+			continue;
+		}
+
 		fprintf(stderr, "%*s ** Unknown tag 0x%08"PRIx32"\n", depth * shift, "", tag);
 		break;
 	}
