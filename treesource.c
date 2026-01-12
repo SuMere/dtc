@@ -384,6 +384,7 @@ void dt_to_source(FILE *f, struct dt_info *dti)
 {
 	struct reserve_info *re;
 	struct symbol *importsym;
+	struct node *orphan;
 
 	fprintf(f, "/dts-v1/;\n");
 	if (dti->dtsflags & DTSF_ADDON)
@@ -410,4 +411,9 @@ void dt_to_source(FILE *f, struct dt_info *dti)
 	}
 
 	write_tree_source_node(f, dti->dt, 0);
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		fprintf(f, "\n");
+		write_tree_source_node(f, orphan, 0);
+	}
 }
