@@ -508,6 +508,18 @@ const void *fdt_getprop(const void *fdt, int nodeoffset,
 	return fdt_getprop_namelen(fdt, nodeoffset, name, strlen(name), lenp);
 }
 
+int fdt_getprop_offset(const void *fdt, int nodeoffset, const char *name)
+{
+	const struct fdt_property *prop;
+	int lenp, offset;
+
+	prop = fdt_get_property_namelen_(fdt, nodeoffset, name, strlen(name),
+					 &lenp, &offset);
+	if (!prop)
+		return lenp;
+	return offset;
+}
+
 uint32_t fdt_get_phandle(const void *fdt, int nodeoffset)
 {
 	const fdt32_t *php;
