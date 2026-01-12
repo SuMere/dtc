@@ -789,10 +789,17 @@ static struct node *get_node_by_ref(struct node *tree, const char *ref)
 
 struct node *dti_get_node_by_path(struct dt_info *dti, const char *path)
 {
+	struct node *orphan;
 	struct node *node;
 
 	if (dti->dt) {
 		node = get_node_by_path(dti->dt, path);
+		if (node)
+			return node;
+	}
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		node = get_node_by_path(orphan, path);
 		if (node)
 			return node;
 	}
@@ -802,10 +809,17 @@ struct node *dti_get_node_by_path(struct dt_info *dti, const char *path)
 
 struct node *dti_get_node_by_label(struct dt_info *dti, const char *label)
 {
+	struct node *orphan;
 	struct node *node;
 
 	if (dti->dt) {
 		node = get_node_by_label(dti->dt, label);
+		if (node)
+			return node;
+	}
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		node = get_node_by_label(orphan, label);
 		if (node)
 			return node;
 	}
@@ -815,10 +829,17 @@ struct node *dti_get_node_by_label(struct dt_info *dti, const char *label)
 
 struct node *dti_get_node_by_phandle(struct dt_info *dti, cell_t phandle)
 {
+	struct node *orphan;
 	struct node *node;
 
 	if (dti->dt) {
 		node = get_node_by_phandle(dti->dt, phandle);
+		if (node)
+			return node;
+	}
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		node = get_node_by_phandle(orphan, phandle);
 		if (node)
 			return node;
 	}
@@ -828,10 +849,17 @@ struct node *dti_get_node_by_phandle(struct dt_info *dti, cell_t phandle)
 
 struct node *dti_get_node_by_ref(struct dt_info *dti, const char *ref)
 {
+	struct node *orphan;
 	struct node *node;
 
 	if (dti->dt) {
 		node = get_node_by_ref(dti->dt, ref);
+		if (node)
+			return node;
+	}
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		node = get_node_by_ref(orphan, ref);
 		if (node)
 			return node;
 	}
@@ -844,9 +872,16 @@ struct property *dti_get_property_by_label(struct dt_info *dti,
 					   struct node **node)
 {
 	struct property *property;
+	struct node *orphan;
 
 	if (dti->dt) {
 		property = get_property_by_label(dti->dt, label, node);
+		if (property)
+			return property;
+	}
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		property = get_property_by_label(orphan, label, node);
 		if (property)
 			return property;
 	}
@@ -859,9 +894,16 @@ struct marker *dti_get_marker_label(struct dt_info *dti, const char *label,
 				    struct node **node, struct property **prop)
 {
 	struct marker *marker;
+	struct node *orphan;
 
 	if (dti->dt) {
 		marker = get_marker_label(dti->dt, label, node, prop);
+		if (marker)
+			return marker;
+	}
+
+	for_each_orphan(dti->orphanlist, orphan) {
+		marker = get_marker_label(orphan, label, node, prop);
 		if (marker)
 			return marker;
 	}
