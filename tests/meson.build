@@ -141,7 +141,8 @@ run_test_types = [
   'fdtput',
   'fdtdump',
   'fdtoverlay',
-  'metadata'
+  'metadata',
+  'fdtaddon'
 ]
 run_test_deps = [
   dtc_tools, dumptrees_dtb, tests_exe
