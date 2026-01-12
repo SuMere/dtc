@@ -804,7 +804,19 @@ static struct node *get_node_by_ref(struct node *tree, const char *ref)
 			path = slash + 1;
 		}
 
-		target = get_node_by_label(tree, label);
+		if (label[0] == '$' && tree->name[0] == '&') {
+			/*
+			 * We search for an orphan and the given tree is an
+			 * orphan. Use the given tree only if it matches the
+			 * expected orphan.
+			 */
+			if (streq(label + 1, tree->name + 1))
+				target = tree;
+			else
+				target = NULL;
+		} else {
+			target = get_node_by_label(tree, label);
+		}
 
 		free(buf);
 

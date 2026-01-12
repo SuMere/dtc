@@ -48,13 +48,31 @@ static void fill_fullpaths(struct node *tree, const char *prefix)
 static void dti_fill_fullpaths(struct dt_info *dti)
 {
 	struct node *orphan;
+	struct node *child;
 
 	/* Fill fullpaths for the root node */
 	if (dti->dt)
 		fill_fullpaths(dti->dt, "");
 
-	for_each_orphan(dti->orphanlist, orphan)
-		fill_fullpaths(orphan, "__orphan__/");
+	/* Fill fullpaths for orphan nodes */
+	for_each_orphan(dti->orphanlist, orphan) {
+		if (orphan->name[0] == '\0')
+			die("orphan node has an empty name\n");
+
+		/*
+		 * An orphan node name is set with its reference.
+		 * Its name is in the form "&xxxxxx".
+		 * For its full path, we use "$xxxxx" to make a clear
+		 * distinction between a reference (&xxxx) where a resolution
+		 * could be involved vs a "simple" path where we just need to
+		 * identified the orphan ($xxxx).
+		 */
+		xasprintf(&orphan->fullpath, "$%s", orphan->name + 1);
+		orphan->basenamelen = strlen(orphan->name);
+
+		for_each_child(orphan, child)
+			fill_fullpaths(child, orphan->fullpath);
+	}
 }
 
 /* Usage related data. */
