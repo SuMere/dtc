@@ -1,0 +1,48 @@
+/dts-v1/;
+/addon/;
+
+/ {
+    sub-node {
+        ref1-base1 = <0xffffffff>;
+        // [FDT_REF_PHANDLE] ref1-base1[0], ref = base1
+        ref2-base1-addon-node = <0x00000001>;
+        // [FDT_REF_LOCAL] ref2-base1-addon-node[0]
+        ref3-base1-addon-node = <0x00000001>;
+        // [FDT_REF_LOCAL] ref3-base1-addon-node[0]
+        ref4-base1-addon-node = <0x00000001>;
+        // [FDT_REF_LOCAL] ref4-base1-addon-node[0]
+        ref5-base3 = <0x00000002>;
+        // [FDT_REF_LOCAL] ref5-base3[0]
+        ref6-base3 = <0x00000002>;
+        // [FDT_REF_LOCAL] ref6-base3[0]
+        ref7-base3-subsubnode = <0x00000003>;
+        // [FDT_REF_LOCAL] ref7-base3-subsubnode[0]
+        phandle = <0x00000004>;
+    };
+};
+&base1 {
+    addon-node {
+        prop = <0x00000002>;
+        phandle = <0x00000001>;
+    };
+};
+&base2 {
+    addon-node1 {
+        ref-base1-addon-node = <0x00000001>;
+        // [FDT_REF_LOCAL] ref-base1-addon-node[0]
+    };
+    addon-node2 {
+        ref-root-sub-node = <0x00000004>;
+        // [FDT_REF_LOCAL] ref-root-sub-node[0]
+    };
+};
+&base3 {
+    phandle = <0x00000002>;
+    sub-node {
+        prop = <0x00000003>;
+        sub-subnode {
+            prop = <0x00000004>;
+            phandle = <0x00000003>;
+        };
+    };
+};
