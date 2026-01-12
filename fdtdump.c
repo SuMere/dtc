@@ -87,6 +87,10 @@ static void dump_blob(void *blob, bool debug)
 	if (version >= 17)
 		printf("// size_dt_struct:\t0x%"PRIx32"\n",
 		       fdt32_to_cpu(bph->size_dt_struct));
+	if (version >= 18) {
+		printf("// dt_flags:\t\t0x%"PRIx32"\n",
+		       fdt32_to_cpu(bph->dt_flags));
+	}
 	printf("\n");
 
 	for (i = 0; ; i++) {

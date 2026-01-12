@@ -285,9 +285,9 @@ class PyLibfdtBasicTests(unittest.TestCase):
         """Test that we can access the header values"""
         self.assertEqual(self.fdt.magic(), 0xd00dfeed)
         self.assertEqual(self.fdt.totalsize(), len(self.fdt._fdt))
-        self.assertEqual(self.fdt.off_dt_struct(), 88)
-        self.assertEqual(self.fdt.off_dt_strings(), 652)
-        self.assertEqual(self.fdt.off_mem_rsvmap(), 40)
+        self.assertEqual(self.fdt.off_dt_struct(), 96)
+        self.assertEqual(self.fdt.off_dt_strings(), 660)
+        self.assertEqual(self.fdt.off_mem_rsvmap(), 48)
         self.assertEqual(self.fdt.version(), 18)
         self.assertEqual(self.fdt.last_comp_version(), 16)
         self.assertEqual(self.fdt.boot_cpuid_phys(), 0)

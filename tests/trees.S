@@ -22,6 +22,7 @@
 	fdtlong	0
 	fdtlong	(\tree\()_strings_end - \tree\()_strings)
 	fdtlong	(\tree\()_struct_end - \tree\()_struct)
+	fdtlong	0
 	.endm
 
 	.macro	rsvmape	addrh, addrl, lenh, lenl

@@ -14,6 +14,7 @@
 #define FTF_STRUCTSIZE	0x20
 #define FTF_NOPS	0x40
 #define FTF_REF_XXX	0x80
+#define FTF_DTFLAGS	0x100
 
 static struct version_info {
 	int version;
@@ -32,7 +33,8 @@ static struct version_info {
 	{17, 16, FDT_V17_SIZE,
 	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS},
 	{18, 18, FDT_V18_SIZE,
-	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS|FTF_REF_XXX},
+	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS|FTF_REF_XXX|
+	 FTF_DTFLAGS},
 };
 
 struct emitter {
@@ -370,7 +372,7 @@ static struct data flatten_reserve_list(struct reserve_info *reservelist,
 static void make_fdt_header(struct fdt_header *fdt,
 			    struct version_info *vi,
 			    int reservesize, int dtsize, int strsize,
-			    int boot_cpuid_phys)
+			    int boot_cpuid_phys, uint32_t dt_flags)
 {
 	int reserve_off;
 
@@ -397,6 +399,8 @@ static void make_fdt_header(struct fdt_header *fdt,
 		fdt->size_dt_strings = cpu_to_fdt32(strsize);
 	if (vi->flags & FTF_STRUCTSIZE)
 		fdt->size_dt_struct = cpu_to_fdt32(dtsize);
+	if (vi->flags & FTF_DTFLAGS)
+		fdt->dt_flags = cpu_to_fdt32(dt_flags);
 }
 
 void dt_to_blob(FILE *f, struct dt_info *dti, int version)
@@ -424,7 +428,7 @@ void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 
 	/* Make header */
 	make_fdt_header(&fdt, vi, reservebuf.len, dtbuf.len, strbuf.len,
-			dti->boot_cpuid_phys);
+			dti->boot_cpuid_phys, 0);
 
 	/*
 	 * If the user asked for more space than is used, adjust the totalsize.
@@ -553,6 +557,11 @@ void dt_to_asm(FILE *f, struct dt_info *dti, int version)
 		fprintf(f, "\t/* size_dt_struct */\n");
 		ASM_EMIT_BELONG(f, "_%s_struct_end - _%s_struct_start",
 			symprefix, symprefix);
+	}
+
+	if (vi->flags & FTF_DTFLAGS) {
+		fprintf(f, "\t/* dt_flags */\n");
+		asm_emit_cell(f, 0);
 	}
 
 	/*
@@ -980,7 +989,7 @@ struct dt_info *dt_from_blob(const char *fname)
 	}
 
 	if (version >= 18)
-		flags |= FTF_REF_XXX;
+		flags |= FTF_REF_XXX | FTF_DTFLAGS;
 
 	inbuf_init(&memresvbuf,
 		   blob + off_mem_rsvmap, blob + totalsize);
