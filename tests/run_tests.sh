@@ -1125,7 +1125,7 @@ wrap_fdtdump () {
 }
 
 metadata_tests() {
-	for dt in metadata_reflocal; do
+	for dt in metadata_reflocal metadata_refphandle; do
 		run_dtc_test -I dts -O dts -o $dt.dts.dts "$SRCDIR/$dt.dts"
 		base_run_test check_diff $dt.dts.dts "$SRCDIR/$dt.dts.dts.expect"
 		run_dtc_test -I dts -O dtb -o $dt.dtb "$SRCDIR/$dt.dts"
