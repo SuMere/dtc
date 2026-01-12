@@ -1158,3 +1158,41 @@ void generate_local_fixups_tree(struct dt_info *dti, const char *name)
 			"Warning: Preexisting data in %s malformed, some content could not be added.\n",
 			name);
 }
+
+static void update_phandles_ref_internal(struct dt_info *dti, struct node *node)
+{
+	struct node *c;
+	struct property *prop;
+	struct marker *m;
+	struct node *refnode;
+	cell_t phandle;
+
+	for_each_property(node, prop) {
+		m = prop->val.markers;
+		for_each_marker_of_type(m, REF_PHANDLE) {
+			if (m->ref)
+				continue;
+
+			if (m->is_local) {
+				phandle = propval_cell_n(prop,
+							 m->offset / sizeof(cell_t));
+				refnode = get_node_by_phandle(dti->dt, phandle);
+				if (!refnode)
+					die("Node not found for phandle 0x%"PRIx32"\n", phandle);
+
+				m->ref = refnode->fullpath;
+				continue;
+			} else {
+				die("Found a non local phandle without a reference\n");
+			}
+		}
+	}
+
+	for_each_child(node, c)
+		update_phandles_ref_internal(dti, c);
+}
+
+void update_phandles_ref(struct dt_info *dti)
+{
+	update_phandles_ref_internal(dti, dti->dt);
+}

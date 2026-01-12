@@ -333,6 +333,8 @@ int main(int argc, char *argv[])
 		generate_fixups = 1;
 	}
 
+	update_phandles_ref(dti);
+
 	process_checks(force, dti);
 
 	if (auto_label_aliases)
