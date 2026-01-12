@@ -685,7 +685,7 @@ static struct node *get_node_by_path(struct node *tree, const char *path)
 	return NULL;
 }
 
-struct node *get_node_by_label(struct node *tree, const char *label)
+static struct node *get_node_by_label(struct node *tree, const char *label)
 {
 	struct node *child, *node;
 	struct label *l;
@@ -791,6 +791,19 @@ struct node *dti_get_node_by_path(struct dt_info *dti, const char *path)
 
 	if (dti->dt) {
 		node = get_node_by_path(dti->dt, path);
+		if (node)
+			return node;
+	}
+
+	return NULL;
+}
+
+struct node *dti_get_node_by_label(struct dt_info *dti, const char *label)
+{
+	struct node *node;
+
+	if (dti->dt) {
+		node = get_node_by_label(dti->dt, label);
 		if (node)
 			return node;
 	}
