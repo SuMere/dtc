@@ -44,6 +44,7 @@ struct emitter {
 	void (*endnode)(void *, struct label *labels);
 	void (*property)(void *, struct label *labels);
 	void (*ref_local)(void *);
+	void (*ref_phandle)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -98,6 +99,11 @@ static void bin_emit_ref_local(void *e)
 	bin_emit_cell(e, FDT_REF_LOCAL);
 }
 
+static void bin_emit_ref_phandle(void *e)
+{
+	bin_emit_cell(e, FDT_REF_PHANDLE);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -107,6 +113,7 @@ static struct emitter bin_emitter = {
 	.endnode = bin_emit_endnode,
 	.property = bin_emit_property,
 	.ref_local = bin_emit_ref_local,
+	.ref_phandle = bin_emit_ref_phandle,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -226,6 +233,14 @@ static void asm_emit_ref_local(void *e)
 	asm_emit_cell(e, FDT_REF_LOCAL);
 }
 
+static void asm_emit_ref_phandle(void *e)
+{
+	FILE *f = e;
+
+	fprintf(f, "\t/* FDT_REF_PHANDLE */\n");
+	asm_emit_cell(e, FDT_REF_PHANDLE);
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -235,6 +250,7 @@ static struct emitter asm_emitter = {
 	.endnode = asm_emit_endnode,
 	.property = asm_emit_property,
 	.ref_local = asm_emit_ref_local,
+	.ref_phandle = asm_emit_ref_phandle,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -299,6 +315,15 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 					emit->cell(etarget, m->offset);
 					continue;
 				}
+
+				if (m->ref[0] == '/')
+					die("Phandle uses a non local reference by path (%s)\n",
+					    m->ref);
+
+				emit->ref_phandle(etarget);
+				emit->cell(etarget, m->offset);
+				emit->string(etarget, m->ref, 0);
+				emit->align(etarget, sizeof(cell_t));
 			}
 		}
 	}
@@ -767,6 +792,7 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 	const char *flatname;
 	uint32_t val;
 	uint32_t offset;
+	const char *str;
 
 	node = build_node(NULL, NULL, NULL);
 
@@ -821,6 +847,17 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			offset = flat_read_word(dtbuf);
 			m = alloc_marker(offset, REF_PHANDLE, NULL);
 			m->is_local = true;
+			prop->val = data_append_markers(prop->val, m);
+			break;
+
+		case FDT_REF_PHANDLE:
+			if (!(flags & FTF_REF_XXX))
+				die("REF_PHANDLE tag found in flat tree"
+					" version <18\n");
+
+			offset = flat_read_word(dtbuf);
+			str = flat_read_string(dtbuf);
+			m = alloc_marker(offset, REF_PHANDLE, xstrdup(str));
 			prop->val = data_append_markers(prop->val, m);
 			break;
 

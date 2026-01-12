@@ -56,6 +56,8 @@ struct fdt_property {
 					   size, content */
 #define FDT_NOP		0x4		/* nop */
 #define FDT_REF_LOCAL   0x5		/* local phandle reference: offset */
+#define FDT_REF_PHANDLE 0x6		/* external phandle reference: offset,
+					   external label */
 #define FDT_END		0x9
 
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))

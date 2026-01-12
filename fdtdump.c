@@ -158,6 +158,16 @@ static void dump_blob(void *blob, bool debug)
 			continue;
 		}
 
+		if (tag == FDT_REF_PHANDLE) {
+			offset = fdt32_to_cpu(GET_CELL(p));
+			s = p;
+			p = PALIGN(p + strlen(s) + 1, 4);
+
+			printf("%*s// [FDT_REF_PHANDLE] %s[%"PRIu32"], ref = %s\n",
+				depth * shift, "", last_prop_name, offset, s);
+			continue;
+		}
+
 		fprintf(stderr, "%*s ** Unknown tag 0x%08"PRIx32"\n", depth * shift, "", tag);
 		break;
 	}

@@ -336,6 +336,18 @@ int main(int argc, char *argv[])
 	update_phandles_ref(dti);
 	mark_local_phandles(dti);
 
+	/*
+	 * With FDT_REF_PHANDLE added in dtbs, we need to identified
+	 * if some unresolved phandle references are allowed in the dtb
+	 * we have parsed (needed for process_check() to run properly).
+	 *
+	 * Identify plugin device-trees (overlays) based on specific node
+	 * presence.
+	 */
+	if (get_subnode(dti->dt, "__fixups__") ||
+	    get_subnode(dti->dt, "__local_fixups__"))
+		dti->dtsflags |= DTSF_PLUGIN;
+
 	process_checks(force, dti);
 
 	if (auto_label_aliases)
