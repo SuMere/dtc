@@ -187,6 +187,7 @@ struct data data_insert_data(struct data d, struct marker *m, struct data old);
 struct marker *alloc_marker(unsigned int offset, enum markertype type,
 			    char *ref);
 struct data data_add_marker(struct data d, enum markertype type, char *ref);
+struct data data_append_markers(struct data d, struct marker *m);
 
 bool data_is_one_string(struct data d);
 
