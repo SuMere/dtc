@@ -232,6 +232,15 @@ uint32_t fdt_next_tag_full(const void *fdt, int startoffset, int *nextoffset)
 			return FDT_END; /* premature end */
 		break;
 
+	case FDT_BEGIN_NODE_REF:
+		/* Skip ref */
+		do {
+			p = fdt_offset_ptr(fdt, offset++, 1);
+		} while (p && (*p != '\0'));
+		if (!can_assume(VALID_DTB) && !p)
+			return FDT_END; /* premature end */
+		break;
+
 	case FDT_EXPORT_SYM:
 		/* Skip name */
 		do {
@@ -342,6 +351,7 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 			break;
 
 		case FDT_IMPORT_SYM:
+		case FDT_BEGIN_NODE_REF:
 			/* Those tags are available at the root level, after the
 			 * root node -> Skip everything until FDT_END
 			 */

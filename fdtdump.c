@@ -176,6 +176,17 @@ static void dump_blob(void *blob, bool debug)
 			continue;
 		}
 
+		if (tag == FDT_BEGIN_NODE_REF) {
+			last_prop_name = NULL;
+			s = p;
+			p = PALIGN(p + strlen(s) + 1, 4);
+
+			printf("%*s&%s {\n", depth * shift, "", s);
+
+			depth++;
+			continue;
+		}
+
 		if (tag == FDT_EXPORT_SYM) {
 			s = p;
 			p = PALIGN(p + strlen(s) + 1, 4);

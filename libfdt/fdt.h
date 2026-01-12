@@ -63,6 +63,8 @@ struct fdt_property {
 #define FDT_REF_LOCAL   0x5		/* local phandle reference: offset */
 #define FDT_REF_PHANDLE 0x6		/* external phandle reference: offset,
 					   external label */
+#define FDT_BEGIN_NODE_REF 0x7		/* Same as FDT_BEGIN_NODE but with
+					   reference instead of name */
 #define FDT_END		0x9
 #define FDT_EXPORT_SYM	0xa		/* export symbol: name, phandle value */
 #define FDT_EXPORT_SYM_REF 0xb		/* export symbol: name, phandle value (maybe

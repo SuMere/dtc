@@ -51,6 +51,7 @@ struct emitter {
 	void (*export_sym)(void *);
 	void (*export_sym_ref)(void *);
 	void (*import_sym)(void *);
+	void (*beginnode_ref)(void *, struct label *labels);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -125,6 +126,11 @@ static void bin_emit_import_sym(void *e)
 	bin_emit_cell(e, FDT_IMPORT_SYM);
 }
 
+static void bin_emit_beginnode_ref(void *e, struct label *labels)
+{
+	bin_emit_cell(e, FDT_BEGIN_NODE_REF);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -138,6 +144,7 @@ static struct emitter bin_emitter = {
 	.export_sym = bin_emit_export_sym,
 	.export_sym_ref = bin_emit_export_sym_ref,
 	.import_sym = bin_emit_import_sym,
+	.beginnode_ref = bin_emit_beginnode_ref,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -292,6 +299,18 @@ static void asm_emit_import_sym(void *e)
 	die("FDT_IMPORT_SYM not supported in asm output\n");
 }
 
+static void asm_emit_beginnode_ref(void *e, struct label *labels)
+{
+	/*
+	 * Orphan nodes (FDT_BEGIN_NODE_REF tags) are an feature
+	 * introduced for addons.
+	 * Addons device-tree blob have to reason to be in the asm format.
+	 *
+	 * Need to be implemented if really needed.
+	 */
+	die("FDT_BEGIN_NODE_REF not supported in asm output\n");
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -305,6 +324,7 @@ static struct emitter asm_emitter = {
 	.export_sym = asm_emit_export_sym,
 	.export_sym = asm_emit_export_sym_ref,
 	.import_sym = asm_emit_import_sym,
+	.beginnode_ref = asm_emit_beginnode_ref,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -335,13 +355,17 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 	if (tree->deleted)
 		return;
 
-	emit->beginnode(etarget, tree->labels);
+	if ((vi->flags & FTF_REF_XXX) && tree->ref) {
+		emit->beginnode_ref(etarget, tree->labels);
+		emit->string(etarget, tree->ref, 0);
+	} else {
+		emit->beginnode(etarget, tree->labels);
 
-	if (vi->flags & FTF_FULLPATH)
-		emit->string(etarget, tree->fullpath, 0);
-	else
-		emit->string(etarget, tree->name, 0);
-
+		if (vi->flags & FTF_FULLPATH)
+			emit->string(etarget, tree->fullpath, 0);
+		else
+			emit->string(etarget, tree->name, 0);
+	}
 	emit->align(etarget, sizeof(cell_t));
 
 	for_each_property(tree, prop) {
@@ -500,6 +524,22 @@ static void flatten_imports(struct symbol *importsymlist, struct emitter *emit,
 	}
 }
 
+static void flatten_orphans(struct node *orphanlist, struct emitter *emit,
+			    void *etarget, struct data *strbuf,
+			    struct version_info *vi, uint32_t dt_flags)
+{
+	struct node *orphan;
+
+	if (!(vi->flags & FTF_REF_XXX))
+		return;
+
+	if (!(dt_flags & FDT_FLAG_ADDON) && orphanlist)
+		die("Only addons can have orphan nodes\n");
+
+	for_each_orphan(orphanlist, orphan)
+		flatten_tree(orphan, emit, etarget, strbuf, vi);
+}
+
 void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 {
 	struct version_info *vi = NULL;
@@ -523,6 +563,9 @@ void dt_to_blob(FILE *f, struct dt_info *dti, int version)
 
 	flatten_tree(dti->dt, &bin_emitter, &dtbuf, &strbuf, vi);
 	flatten_imports(dti->importsymlist, &bin_emitter, &dtbuf, vi, dt_flags);
+	flatten_orphans(dti->orphanlist, &bin_emitter, &dtbuf, &strbuf, vi,
+			dt_flags);
+
 	bin_emit_cell(&dtbuf, FDT_END);
 
 	reservebuf = flatten_reserve_list(dti->reservelist, vi);
@@ -616,6 +659,9 @@ void dt_to_asm(FILE *f, struct dt_info *dti, int version)
 
 	if (dti->importsymlist)
 		die("Import symbols not supported in asm format\n");
+	if (dti->orphanlist)
+		die("Orphan nodes not supported in asm format\n");
+
 
 	for (i = 0; i < ARRAY_SIZE(version_table); i++) {
 		if (version_table[i].version == version)
@@ -912,7 +958,8 @@ static const char *nodename_from_path(const char *ppath, const char *cpath)
 
 static struct node *unflatten_tree(struct inbuf *dtbuf,
 				   struct inbuf *strbuf,
-				   const char *parent_flatname, int flags)
+				   const char *parent_flatname, int flags,
+				   bool is_orphan_node)
 {
 	struct node *node;
 	const char *flatname;
@@ -922,14 +969,18 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 	const char *str2;
 
 	node = build_node(NULL, NULL, NULL, NULL);
-
-	flatname = flat_read_string(dtbuf);
-
-	if (flags & FTF_FULLPATH)
-		node->name = xstrdup(nodename_from_path(parent_flatname,
-							flatname));
-	else
-		node->name = xstrdup(flatname);
+	if (is_orphan_node) {
+		str = flat_read_string(dtbuf);
+		orphan_node(node, str);
+		flatname = "";
+	} else {
+		flatname = flat_read_string(dtbuf);
+		if (flags & FTF_FULLPATH)
+			node->name = xstrdup(nodename_from_path(parent_flatname,
+					     flatname));
+		else
+			node->name = xstrdup(flatname);
+	}
 
 	do {
 		struct symbol *exportsym;
@@ -949,7 +1000,7 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			break;
 
 		case FDT_BEGIN_NODE:
-			child = unflatten_tree(dtbuf,strbuf, flatname, flags);
+			child = unflatten_tree(dtbuf, strbuf, flatname, flags, false);
 			add_child(node, child);
 			break;
 
@@ -1012,6 +1063,11 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			add_symbol(&node->exportsymlist, exportsym);
 			break;
 
+		case FDT_BEGIN_NODE_REF:
+			/* FDT_BEGIN_NODE_REF can only be at the FDT top level. */
+			die("Unexpected FDT_BEGIN_NODE_REF tag\n");
+			break;
+
 		default:
 			die("Invalid opcode word %08x in device tree blob\n",
 			    val);
@@ -1039,6 +1095,8 @@ struct dt_info *dt_from_blob(const char *fname)
 	struct node *tree;
 	struct symbol *importsymlist = NULL;
 	struct symbol *importsym;
+	struct node *orphanlist = NULL;
+	struct node *orphan;
 	uint32_t val;
 	int flags = 0;
 	unsigned int dtsflags = 0;
@@ -1150,7 +1208,7 @@ struct dt_info *dt_from_blob(const char *fname)
 	if (val != FDT_BEGIN_NODE)
 		die("Device tree blob doesn't begin with FDT_BEGIN_NODE (begins with 0x%08x)\n", val);
 
-	tree = unflatten_tree(&dtbuf, &strbuf, "", flags);
+	tree = unflatten_tree(&dtbuf, &strbuf, "", flags, false);
 
 	val = flat_read_word(&dtbuf);
 
@@ -1159,6 +1217,15 @@ struct dt_info *dt_from_blob(const char *fname)
 			while (val == FDT_IMPORT_SYM) {
 				importsym = flat_read_importsym(&dtbuf);
 				add_symbol(&importsymlist, importsym);
+				val = flat_read_word(&dtbuf);
+			}
+		}
+
+		if (flags & FTF_REF_XXX) {
+			while (val == FDT_BEGIN_NODE_REF) {
+				orphan = unflatten_tree(&dtbuf, &strbuf, "", flags,
+							true);
+				addon_add_orphan_node(&orphanlist, orphan);
 				val = flat_read_word(&dtbuf);
 			}
 		}
@@ -1172,5 +1239,5 @@ struct dt_info *dt_from_blob(const char *fname)
 	fclose(f);
 
 	return build_dt_info(DTSF_V1 | dtsflags, reservelist, tree, boot_cpuid_phys,
-			     importsymlist, NULL);
+			     importsymlist, orphanlist);
 }
