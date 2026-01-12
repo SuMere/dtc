@@ -47,9 +47,14 @@ static void fill_fullpaths(struct node *tree, const char *prefix)
 
 static void dti_fill_fullpaths(struct dt_info *dti)
 {
+	struct node *orphan;
+
 	/* Fill fullpaths for the root node */
 	if (dti->dt)
 		fill_fullpaths(dti->dt, "");
+
+	for_each_orphan(dti->orphanlist, orphan)
+		fill_fullpaths(orphan, "__orphan__/");
 }
 
 /* Usage related data. */
