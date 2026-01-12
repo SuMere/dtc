@@ -1203,7 +1203,9 @@ void sort_tree(struct dt_info *dti)
 {
 	sort_reserve_entries(dti);
 	sort_importsyms(dti);
-	sort_node(dti->dt);
+
+	if (dti->dt)
+		sort_node(dti->dt);
 }
 
 /* utility helper to avoid code duplication */
@@ -1451,6 +1453,8 @@ static int generate_local_fixups_tree_internal(struct dt_info *dti,
 
 void generate_label_tree(struct dt_info *dti, const char *name, bool allocph)
 {
+	assert(dti->dt);
+
 	if (!any_label_tree(dti, dti->dt))
 		return;
 	generate_label_tree_internal(dti, build_root_node(dti->dt, name),
@@ -1459,6 +1463,8 @@ void generate_label_tree(struct dt_info *dti, const char *name, bool allocph)
 
 void generate_fixups_tree(struct dt_info *dti, const char *name)
 {
+	assert(dti->dt);
+
 	if (!any_fixup_tree(dti, dti->dt))
 		return;
 	if (generate_fixups_tree_internal(dti, build_root_node(dti->dt, name), dti->dt))
@@ -1469,6 +1475,8 @@ void generate_fixups_tree(struct dt_info *dti, const char *name)
 
 void generate_local_fixups_tree(struct dt_info *dti, const char *name)
 {
+	assert(dti->dt);
+
 	if (!any_local_fixup_tree(dti, dti->dt))
 		return;
 	if (generate_local_fixups_tree_internal(dti, build_root_node(dti->dt, name), dti->dt))
@@ -1514,7 +1522,8 @@ void update_phandles_ref(struct dt_info *dti)
 {
 	struct node *orphan;
 
-	update_phandles_ref_internal(dti, dti->dt);
+	if (dti->dt)
+		update_phandles_ref_internal(dti, dti->dt);
 
 	for_each_orphan(dti->orphanlist, orphan)
 		update_phandles_ref_internal(dti, orphan);
@@ -1545,7 +1554,8 @@ void mark_local_phandles(struct dt_info *dti)
 {
 	struct node *orphan;
 
-	mark_local_phandles_internal(dti, dti->dt);
+	if (dti->dt)
+		mark_local_phandles_internal(dti, dti->dt);
 
 	for_each_orphan(dti->orphanlist, orphan)
 		mark_local_phandles_internal(dti, orphan);
@@ -1580,7 +1590,8 @@ void update_exports_ref(struct dt_info *dti)
 {
 	struct node *orphan;
 
-	update_exports_ref_internal(dti, dti->dt);
+	if (dti->dt)
+		update_exports_ref_internal(dti, dti->dt);
 
 	for_each_orphan(dti->orphanlist, orphan)
 		update_exports_ref_internal(dti, orphan);
@@ -1607,7 +1618,8 @@ void mark_local_exports(struct dt_info *dti)
 {
 	struct node *orphan;
 
-	mark_local_exports_internal(dti, dti->dt);
+	if (dti->dt)
+		mark_local_exports_internal(dti, dti->dt);
 
 	for_each_orphan(dti->orphanlist, orphan)
 		mark_local_exports_internal(dti, orphan);

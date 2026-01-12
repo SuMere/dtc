@@ -351,27 +351,37 @@ int main(int argc, char *argv[])
 	update_exports_ref(dti);
 	mark_local_exports(dti);
 
-	/*
-	 * With FDT_REF_PHANDLE added in dtbs, we need to identified
-	 * if some unresolved phandle references are allowed in the dtb
-	 * we have parsed (needed for process_check() to run properly).
-	 *
-	 * Identify plugin device-trees (overlays) based on specific node
-	 * presence.
-	 */
-	if (get_subnode(dti->dt, "__fixups__") ||
-	    get_subnode(dti->dt, "__local_fixups__"))
-		dti->dtsflags |= DTSF_PLUGIN;
+	if (dti->dt) {
+		/*
+		 * With FDT_REF_PHANDLE added in dtbs, we need to identified
+		 * if some unresolved phandle references are allowed in the dtb
+		 * we have parsed (needed for process_check() to run properly).
+		 *
+		 * Identify plugin device-trees (overlays) based on specific node
+		 * presence.
+		 */
+		if (get_subnode(dti->dt, "__fixups__") ||
+		    get_subnode(dti->dt, "__local_fixups__"))
+			dti->dtsflags |= DTSF_PLUGIN;
+	}
 
 	process_checks(force, dti);
 
-	if (auto_label_aliases)
+	if (auto_label_aliases) {
+		if (!dti->dt)
+			die("auto-alias not supported without a root node\n");
 		generate_label_tree(dti, "aliases", false);
+	}
 
-	if (generate_symbols)
+	if (generate_symbols) {
+		if (!dti->dt)
+			die("generation of symbols not supported without a root node\n");
 		generate_label_tree(dti, "__symbols__", true);
+	}
 
 	if (generate_fixups) {
+		if (!dti->dt)
+			die("generation of fixups not supported without a root node\n");
 		generate_fixups_tree(dti, "__fixups__");
 		generate_local_fixups_tree(dti, "__local_fixups__");
 	}
