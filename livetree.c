@@ -1481,7 +1481,12 @@ static void update_phandles_ref_internal(struct dt_info *dti, struct node *node)
 
 void update_phandles_ref(struct dt_info *dti)
 {
+	struct node *orphan;
+
 	update_phandles_ref_internal(dti, dti->dt);
+
+	for_each_orphan(dti->orphanlist, orphan)
+		update_phandles_ref_internal(dti, orphan);
 }
 
 static void mark_local_phandles_internal(struct dt_info *dti,
@@ -1507,7 +1512,12 @@ static void mark_local_phandles_internal(struct dt_info *dti,
 
 void mark_local_phandles(struct dt_info *dti)
 {
+	struct node *orphan;
+
 	mark_local_phandles_internal(dti, dti->dt);
+
+	for_each_orphan(dti->orphanlist, orphan)
+		mark_local_phandles_internal(dti, orphan);
 }
 
 static void update_exports_ref_internal(struct dt_info *dti, struct node *node)
@@ -1537,7 +1547,12 @@ static void update_exports_ref_internal(struct dt_info *dti, struct node *node)
 
 void update_exports_ref(struct dt_info *dti)
 {
+	struct node *orphan;
+
 	update_exports_ref_internal(dti, dti->dt);
+
+	for_each_orphan(dti->orphanlist, orphan)
+		update_exports_ref_internal(dti, orphan);
 }
 
 static void mark_local_exports_internal(struct dt_info *dti,
@@ -1559,6 +1574,10 @@ static void mark_local_exports_internal(struct dt_info *dti,
 
 void mark_local_exports(struct dt_info *dti)
 {
+	struct node *orphan;
+
 	mark_local_exports_internal(dti, dti->dt);
 
+	for_each_orphan(dti->orphanlist, orphan)
+		mark_local_exports_internal(dti, orphan);
 }
