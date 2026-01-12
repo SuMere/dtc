@@ -67,7 +67,6 @@ static void dump_blob(void *blob, bool debug)
 	depth = 0;
 	shift = 4;
 
-	printf("/dts-v1/;\n");
 	printf("// magic:\t\t0x%"PRIx32"\n", fdt32_to_cpu(bph->magic));
 	printf("// totalsize:\t\t0x%"PRIx32" (%"PRIu32")\n",
 	       totalsize, totalsize);
@@ -90,6 +89,11 @@ static void dump_blob(void *blob, bool debug)
 	if (version >= 18) {
 		printf("// dt_flags:\t\t0x%"PRIx32"\n",
 		       fdt32_to_cpu(bph->dt_flags));
+	}
+	printf("/dts-v1/;\n");
+	if (version >= 18) {
+		if (fdt32_to_cpu(bph->dt_flags) & FDT_FLAG_ADDON)
+			printf("/addon/;\n");
 	}
 	printf("\n");
 
