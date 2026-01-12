@@ -1090,6 +1090,59 @@ fdtoverlay_tests() {
     run_wrap_test test "$bd" = "$pd"
 }
 
+# $1: f1 file
+# $2: f2 file
+check_diff () {
+    printf "diff $1 $2:	"
+    local f1="$1"
+    local f2="$2"
+    (
+        if diff $f1 $f2 >/dev/null; then
+            PASS
+        else
+            if [ -z "$QUIET_TEST" ]; then
+                echo "DIFF :-:"
+                diff -u $f1 $f2
+            fi
+            FAIL "Results differ from expected"
+        fi
+    )
+}
+
+# $1: dtb file
+# $2: out file
+wrap_fdtdump () {
+    printf "wrap_fdtdump $1:	"
+    local dtb="$1"
+    local out="$2"
+    (
+        if $FDTDUMP ${dtb} 2>/dev/null >${out}; then
+            PASS
+        else
+            FAIL
+        fi
+    )
+}
+
+metadata_tests() {
+	for dt in metadata_reflocal; do
+		run_dtc_test -I dts -O dts -o $dt.dts.dts "$SRCDIR/$dt.dts"
+		base_run_test check_diff $dt.dts.dts "$SRCDIR/$dt.dts.dts.expect"
+		run_dtc_test -I dts -O dtb -o $dt.dtb "$SRCDIR/$dt.dts"
+		base_run_test wrap_fdtdump $dt.dtb $dt.dtb.out
+		# Remove unneeded comments
+		sed -i '/^\/\/ /d' $dt.dtb.out
+		base_run_test check_diff $dt.dtb.out "$SRCDIR/$dt.dtb.expect"
+		run_dtc_test -I dtb -O dts -o $dt.dtb.dts $dt.dtb
+		base_run_test check_diff $dt.dtb.dts "$SRCDIR/$dt.dtb.dts.expect"
+		run_dtc_test -I dts -O dtb -o $dt.dtb.dts.dtb $dt.dtb.dts
+		base_run_test wrap_fdtdump $dt.dtb.dts.dtb $dt.dtb.dts.dtb.out
+		# Remove unneeded comments
+		sed -i '/^\/\/ /d' $dt.dtb.dts.dtb.out
+		base_run_test check_diff $dt.dtb.dts.dtb.out "$SRCDIR/$dt.dtb.expect"
+	done
+}
+
 pylibfdt_tests () {
     run_dtc_test -I dts -O dtb -o test_props.dtb "$SRCDIR/test_props.dts"
     TMP=/tmp/tests.stderr.$$
@@ -1129,7 +1182,7 @@ while getopts "vt:me" ARG ; do
 done
 
 if [ -z "$TESTSETS" ]; then
-    TESTSETS="libfdt utilfdt dtc dtbs_equal fdtget fdtput fdtdump fdtoverlay"
+    TESTSETS="libfdt utilfdt dtc dtbs_equal fdtget fdtput fdtdump fdtoverlay metadata"
 
     # Test pylibfdt if the libfdt Python module is available.
     if ! $no_python; then
@@ -1168,6 +1221,9 @@ for set in $TESTSETS; do
 	    ;;
         "fdtoverlay")
 	    fdtoverlay_tests
+	    ;;
+	"metadata")
+	    metadata_tests
 	    ;;
     esac
 done

@@ -140,7 +140,8 @@ run_test_types = [
   'fdtget',
   'fdtput',
   'fdtdump',
-  'fdtoverlay'
+  'fdtoverlay',
+  'metadata'
 ]
 run_test_deps = [
   dtc_tools, dumptrees_dtb, tests_exe
