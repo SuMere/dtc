@@ -155,6 +155,7 @@ static bool is_multiple_of(int multiple, int divisor)
 static bool run_check(struct check *c, struct dt_info *dti)
 {
 	struct node *dt = dti->dt;
+	struct node *orphan;
 	bool error = false;
 	int i;
 
@@ -179,6 +180,9 @@ static bool run_check(struct check *c, struct dt_info *dti)
 		goto out;
 
 	check_nodes_props(c, dti, dt);
+
+	for_each_orphan(dti->orphanlist, orphan)
+		check_nodes_props(c, dti, orphan);
 
 	if (c->status == UNCHECKED)
 		c->status = PASSED;
