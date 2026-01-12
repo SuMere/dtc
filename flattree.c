@@ -49,6 +49,7 @@ struct emitter {
 	void (*ref_local)(void *);
 	void (*ref_phandle)(void *);
 	void (*export_sym)(void *);
+	void (*export_sym_ref)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -113,6 +114,11 @@ static void bin_emit_export_sym(void *e)
 	bin_emit_cell(e, FDT_EXPORT_SYM);
 }
 
+static void bin_emit_export_sym_ref(void *e)
+{
+	bin_emit_cell(e, FDT_EXPORT_SYM_REF);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -124,6 +130,7 @@ static struct emitter bin_emitter = {
 	.ref_local = bin_emit_ref_local,
 	.ref_phandle = bin_emit_ref_phandle,
 	.export_sym = bin_emit_export_sym,
+	.export_sym_ref = bin_emit_export_sym_ref,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -259,6 +266,14 @@ static void asm_emit_export_sym(void *e)
 	asm_emit_cell(e, FDT_EXPORT_SYM);
 }
 
+static void asm_emit_export_sym_ref(void *e)
+{
+	FILE *f = e;
+
+	fprintf(f, "\t/* FDT_EXPORT_SYM_REF */\n");
+	asm_emit_cell(e, FDT_EXPORT_SYM_REF);
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -270,6 +285,7 @@ static struct emitter asm_emitter = {
 	.ref_local = asm_emit_ref_local,
 	.ref_phandle = asm_emit_ref_phandle,
 	.export_sym = asm_emit_export_sym,
+	.export_sym = asm_emit_export_sym_ref,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -369,6 +385,18 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 				emit->cell(etarget, exportsym->phandle);
 				continue;
 			}
+
+			if (exportsym->ref[0] == '/')
+				die("Export symbol uses a non local reference by path (%s)\n",
+				    m->ref);
+
+			emit->export_sym_ref(etarget);
+			emit->string(etarget, exportsym->name, 0);
+			emit->align(etarget, sizeof(cell_t));
+			/* Placeholder for the phandle */
+			emit->cell(etarget, exportsym->phandle);
+			emit->string(etarget, exportsym->ref, 0);
+			emit->align(etarget, sizeof(cell_t));
 		}
 	}
 
@@ -838,6 +866,7 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 	uint32_t val;
 	uint32_t offset;
 	const char *str;
+	const char *str2;
 
 	node = build_node(NULL, NULL, NULL, NULL);
 
@@ -916,6 +945,17 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			phandle = flat_read_word(dtbuf);
 			exportsym = build_exportsym(str, NULL, phandle, NULL);
 			exportsym->is_local = true;
+			add_symbol(&node->exportsymlist, exportsym);
+			break;
+
+		case FDT_EXPORT_SYM_REF:
+			if (!(flags & FTF_EXPORT_IMPORT_SYM))
+				die("FDT_EXPORT_SYM_REF tag found in flat tree"
+					" version <18\n");
+			str = flat_read_string(dtbuf); /* Name */
+			phandle = flat_read_word(dtbuf); /* Phandle */
+			str2 = flat_read_string(dtbuf); /* Ref */
+			exportsym = build_exportsym(str, str2, phandle, NULL);
 			add_symbol(&node->exportsymlist, exportsym);
 			break;
 

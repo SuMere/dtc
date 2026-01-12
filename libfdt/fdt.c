@@ -248,6 +248,29 @@ uint32_t fdt_next_tag_full(const void *fdt, int startoffset, int *nextoffset)
 		offset += sizeof(fdt32_t);
 		break;
 
+	case FDT_EXPORT_SYM_REF:
+		/* Skip name */
+		do {
+			p = fdt_offset_ptr(fdt, offset++, 1);
+		} while (p && (*p != '\0'));
+		if (!can_assume(VALID_DTB) && !p)
+			return FDT_END; /* premature end */
+		offset = FDT_CELLALIGN(offset);
+
+		/* Skip phandle */
+		tmp32p = fdt_offset_ptr(fdt, offset, sizeof(*tmp32p));
+		if (!can_assume(VALID_DTB) && !tmp32p)
+			return FDT_END; /* premature end */
+		offset += sizeof(fdt32_t);
+
+		/* Skip external name */
+		do {
+			p = fdt_offset_ptr(fdt, offset++, 1);
+		} while (p && (*p != '\0'));
+		if (!can_assume(VALID_DTB) && !p)
+			return FDT_END; /* premature end */
+		break;
+
 	default:
 		return FDT_END;
 	}
@@ -290,6 +313,7 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 		case FDT_REF_LOCAL:
 		case FDT_REF_PHANDLE:
 		case FDT_EXPORT_SYM:
+		case FDT_EXPORT_SYM_REF:
 			/*
 			 * Next tag is a meta-data tag present in the middle
 			 * of the structure -> Skip it and look at next one
