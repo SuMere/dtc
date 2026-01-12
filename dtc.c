@@ -45,6 +45,13 @@ static void fill_fullpaths(struct node *tree, const char *prefix)
 		fill_fullpaths(child, tree->fullpath);
 }
 
+static void dti_fill_fullpaths(struct dt_info *dti)
+{
+	/* Fill fullpaths for the root node */
+	if (dti->dt)
+		fill_fullpaths(dti->dt, "");
+}
+
 /* Usage related data. */
 static const char usage_synopsis[] = "dtc [options] <input file>";
 static const char usage_short_opts[] = "qI:O:o:V:d:R:S:p:a:fb:i:H:sW:E:@LAThv";
@@ -326,7 +333,7 @@ int main(int argc, char *argv[])
 	if (cmdline_boot_cpuid != -1)
 		dti->boot_cpuid_phys = cmdline_boot_cpuid;
 
-	fill_fullpaths(dti->dt, "");
+	dti_fill_fullpaths(dti);
 
 	/* on a plugin, generate by default */
 	if (dti->dtsflags & DTSF_PLUGIN) {
