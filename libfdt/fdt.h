@@ -53,6 +53,7 @@ struct fdt_property {
 #define FDT_MAGIC	0xd00dfeed	/* 4: version, 4: total size */
 #define FDT_FLAG_ADDON  0x1
 #define FDT_TAGSIZE	sizeof(fdt32_t)
+#define FDT_CELLSIZE	sizeof(fdt32_t)
 
 #define FDT_BEGIN_NODE	0x1		/* Start node: full name */
 #define FDT_END_NODE	0x2		/* End node */
@@ -63,6 +64,7 @@ struct fdt_property {
 #define FDT_REF_PHANDLE 0x6		/* external phandle reference: offset,
 					   external label */
 #define FDT_END		0x9
+#define FDT_EXPORT_SYM	0xa		/* export symbol: name, phandle value */
 
 #define FDT_V1_SIZE	(7*sizeof(fdt32_t))
 #define FDT_V2_SIZE	(FDT_V1_SIZE + sizeof(fdt32_t))

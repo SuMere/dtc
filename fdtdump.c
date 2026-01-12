@@ -57,7 +57,7 @@ static void dump_blob(void *blob, bool debug)
 	const char *p_strings = (const char *)blob + off_str;
 	uint32_t version = fdt32_to_cpu(bph->version);
 	uint32_t totalsize = fdt32_to_cpu(bph->totalsize);
-	uint32_t tag, offset;
+	uint32_t tag, offset, val32;
 	const char *p, *s, *t;
 	const char *last_prop_name = NULL;
 	int depth, sz, shift;
@@ -173,6 +173,16 @@ static void dump_blob(void *blob, bool debug)
 
 			printf("%*s// [FDT_REF_PHANDLE] %s[%"PRIu32"], ref = %s\n",
 				depth * shift, "", last_prop_name, offset, s);
+			continue;
+		}
+
+		if (tag == FDT_EXPORT_SYM) {
+			s = p;
+			p = PALIGN(p + strlen(s) + 1, 4);
+			val32 = fdt32_to_cpu(GET_CELL(p));
+
+			printf("%*s// [FDT_EXPORT_SYM] '%s' -> phandle 0x%08"PRIx32"\n",
+				depth * shift, "", s, val32);
 			continue;
 		}
 

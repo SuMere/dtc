@@ -15,6 +15,7 @@
 #define FTF_NOPS	0x40
 #define FTF_REF_XXX	0x80
 #define FTF_DTFLAGS	0x100
+#define FTF_EXPORT_IMPORT_SYM 0x200
 
 static struct version_info {
 	int version;
@@ -34,7 +35,7 @@ static struct version_info {
 	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS},
 	{18, 18, FDT_V18_SIZE,
 	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS|FTF_REF_XXX|
-	 FTF_DTFLAGS},
+	 FTF_DTFLAGS|FTF_EXPORT_IMPORT_SYM},
 };
 
 struct emitter {
@@ -47,6 +48,7 @@ struct emitter {
 	void (*property)(void *, struct label *labels);
 	void (*ref_local)(void *);
 	void (*ref_phandle)(void *);
+	void (*export_sym)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -106,6 +108,11 @@ static void bin_emit_ref_phandle(void *e)
 	bin_emit_cell(e, FDT_REF_PHANDLE);
 }
 
+static void bin_emit_export_sym(void *e)
+{
+	bin_emit_cell(e, FDT_EXPORT_SYM);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -116,6 +123,7 @@ static struct emitter bin_emitter = {
 	.property = bin_emit_property,
 	.ref_local = bin_emit_ref_local,
 	.ref_phandle = bin_emit_ref_phandle,
+	.export_sym = bin_emit_export_sym,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -243,6 +251,14 @@ static void asm_emit_ref_phandle(void *e)
 	asm_emit_cell(e, FDT_REF_PHANDLE);
 }
 
+static void asm_emit_export_sym(void *e)
+{
+	FILE *f = e;
+
+	fprintf(f, "\t/* FDT_EXPORT_SYM */\n");
+	asm_emit_cell(e, FDT_EXPORT_SYM);
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -253,6 +269,7 @@ static struct emitter asm_emitter = {
 	.property = asm_emit_property,
 	.ref_local = asm_emit_ref_local,
 	.ref_phandle = asm_emit_ref_phandle,
+	.export_sym = asm_emit_export_sym,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -274,6 +291,7 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 			 void *etarget, struct data *strbuf,
 			 struct version_info *vi)
 {
+	struct symbol *exportsym;
 	struct property *prop;
 	struct node *child;
 	bool seen_name_prop = false;
@@ -340,6 +358,18 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 
 		emit->string(etarget, tree->name, tree->basenamelen);
 		emit->align(etarget, sizeof(cell_t));
+	}
+
+	if (vi->flags & FTF_EXPORT_IMPORT_SYM) {
+		for_each_symbol(tree->exportsymlist, exportsym) {
+			if (exportsym->is_local) {
+				emit->export_sym(etarget);
+				emit->string(etarget, exportsym->name, 0);
+				emit->align(etarget, sizeof(cell_t));
+				emit->cell(etarget, exportsym->phandle);
+				continue;
+			}
+		}
 	}
 
 	for_each_child(tree, child) {
@@ -820,9 +850,11 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 		node->name = xstrdup(flatname);
 
 	do {
+		struct symbol *exportsym;
 		struct property *prop;
 		struct node *child;
 		struct marker *m;
+		cell_t phandle;
 
 		val = flat_read_word(dtbuf);
 		switch (val) {
@@ -874,6 +906,17 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 			str = flat_read_string(dtbuf);
 			m = alloc_marker(offset, REF_PHANDLE, xstrdup(str));
 			prop->val = data_append_markers(prop->val, m);
+			break;
+
+		case FDT_EXPORT_SYM:
+			if (!(flags & FTF_EXPORT_IMPORT_SYM))
+				die("FDT_EXPORT_SYM tag found in flat tree"
+					" version <18\n");
+			str = flat_read_string(dtbuf);
+			phandle = flat_read_word(dtbuf);
+			exportsym = build_exportsym(str, NULL, phandle, NULL);
+			exportsym->is_local = true;
+			add_symbol(&node->exportsymlist, exportsym);
 			break;
 
 		default:
@@ -996,7 +1039,7 @@ struct dt_info *dt_from_blob(const char *fname)
 	}
 
 	if (version >= 18) {
-		flags |= FTF_REF_XXX | FTF_DTFLAGS;
+		flags |= FTF_REF_XXX | FTF_DTFLAGS | FTF_EXPORT_IMPORT_SYM;
 		dtsflags |= fdt32_to_cpu(fdt->dt_flags) & FDT_FLAG_ADDON ?
 				DTSF_ADDON : 0;
 	}
