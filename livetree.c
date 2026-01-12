@@ -620,7 +620,7 @@ static struct property *get_property_by_label(struct node *tree, const char *lab
 	return NULL;
 }
 
-struct marker *get_marker_label(struct node *tree, const char *label,
+static struct marker *get_marker_label(struct node *tree, const char *label,
 				struct node **node, struct property **prop)
 {
 	struct marker *m;
@@ -849,6 +849,22 @@ struct property *dti_get_property_by_label(struct dt_info *dti,
 			return property;
 	}
 
+	*node = NULL;
+	return NULL;
+}
+
+struct marker *dti_get_marker_label(struct dt_info *dti, const char *label,
+				    struct node **node, struct property **prop)
+{
+	struct marker *marker;
+
+	if (dti->dt) {
+		marker = get_marker_label(dti->dt, label, node, prop);
+		if (marker)
+			return marker;
+	}
+
+	*prop = NULL;
 	*node = NULL;
 	return NULL;
 }
