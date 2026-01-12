@@ -853,14 +853,14 @@ static void add_phandle_property(struct node *node,
 	add_property(node, build_property(name, d, NULL));
 }
 
-cell_t get_node_phandle(struct node *root, struct node *node)
+cell_t dti_get_node_phandle(struct dt_info *dti, struct node *node)
 {
 	static cell_t phandle = 1; /* FIXME: ick, static local */
 
 	if (phandle_is_valid(node->phandle))
 		return node->phandle;
 
-	while (get_node_by_phandle(root, phandle))
+	while (dti_get_node_by_phandle(dti, phandle))
 		phandle++;
 
 	node->phandle = phandle;
@@ -1143,7 +1143,6 @@ static void generate_label_tree_internal(struct dt_info *dti,
 					 struct node *an, struct node *node,
 					 bool allocph)
 {
-	struct node *dt = dti->dt;
 	struct node *c;
 	struct property *p;
 	struct label *l;
@@ -1173,7 +1172,7 @@ static void generate_label_tree_internal(struct dt_info *dti,
 
 		/* force allocation of a phandle for this node */
 		if (allocph)
-			(void)get_node_phandle(dt, node);
+			(void)dti_get_node_phandle(dti, node);
 	}
 
 	for_each_child(node, c)
