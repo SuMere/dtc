@@ -159,7 +159,7 @@ const void *fdt_offset_ptr(const void *fdt, int offset, unsigned int len)
 	return fdt_offset_ptr_(fdt, offset);
 }
 
-uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
+uint32_t fdt_next_tag_full(const void *fdt, int startoffset, int *nextoffset)
 {
 	const fdt32_t *tagp, *lenp;
 	uint32_t tag, len, sum;
@@ -218,6 +218,39 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 
 	*nextoffset = FDT_TAGALIGN(offset);
 	return tag;
+}
+
+uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
+{
+	uint32_t tag, tmp_tag;
+	int tmp_offset, tmp_next;
+
+	/* Retrieve next tag */
+	tag = fdt_next_tag_full(fdt, startoffset, nextoffset);
+
+	/* Look at next one to see what we need to do */
+	tmp_next = *nextoffset;
+	do {
+		tmp_offset = tmp_next;
+		tmp_tag = fdt_next_tag_full(fdt, tmp_offset, &tmp_next);
+		switch (tmp_tag) {
+		case FDT_BEGIN_NODE:
+		case FDT_END_NODE:
+		case FDT_PROP:
+		case FDT_NOP:
+		case FDT_END:
+			/* Next tag is not new tag introduced in v18 -> Ok */
+			*nextoffset = tmp_offset;
+			return tag;
+
+		default:
+			break;
+		}
+	} while (1);
+
+	/* We shouldn't reach this code */
+	*nextoffset = -FDT_ERR_BADSTRUCTURE;
+	return FDT_END;
 }
 
 int fdt_check_node_offset_(const void *fdt, int offset)

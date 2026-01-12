@@ -52,6 +52,7 @@ LIBFDT_1.2 {
 		fdt_strerror;
 		fdt_offset_ptr;
 		fdt_next_tag;
+		fdt_next_tag_full;
 		fdt_appendprop;
 		fdt_create_empty_tree;
 		fdt_first_property_offset;

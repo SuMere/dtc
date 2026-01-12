@@ -154,6 +154,24 @@ static inline void *fdt_offset_ptr_w(void *fdt, int offset, int checklen)
  */
 uint32_t fdt_next_tag(const void *fdt, int offset, int *nextoffset);
 
+/**
+ * fdt_next_tag_full - get next tag in the device tree without any filtering
+ * @fdt:	Pointer to the device tree blob
+ * @offset:	Offset within the blob to start searching
+ * @nextoffset:	Pointer to variable to store the offset of the next tag
+ *
+ * fdt_next_tag_full() returns the tag type of the next tag in the device tree
+ * blob starting from the given @offset. If @nextoffset is non-NULL, it will
+ * be set to the offset immediately following the tag.
+ * fdt_next_tag() can return only a subset of all possible tags performing some
+ * internal filtering. fdt_next_tag_full() doesn't perform this filtering.
+ *
+ * returns:
+ *	the tag type (FDT_BEGIN_NODE, FDT_END_NODE, FDT_PROP, FDT_NOP, FDT_END),
+ *	FDT_END, if offset is out of bounds
+ */
+uint32_t fdt_next_tag_full(const void *fdt, int offset, int *nextoffset);
+
 /*
  * External helpers to access words from a device tree blob. They're built
  * to work even with unaligned pointers on platforms (such as ARMv5) that don't
