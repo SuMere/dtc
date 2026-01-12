@@ -809,7 +809,7 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 	uint32_t offset;
 	const char *str;
 
-	node = build_node(NULL, NULL, NULL);
+	node = build_node(NULL, NULL, NULL, NULL);
 
 	flatname = flat_read_string(dtbuf);
 
