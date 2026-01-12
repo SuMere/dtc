@@ -337,6 +337,91 @@ int fdt_delprop(void *fdt, int nodeoffset, const char *name)
 	return fdt_splice_struct_(fdt, prop, proplen, 0);
 }
 
+int fdt_mark_property_ref_local_(void *fdt, int fdt_property,
+				 uint32_t propoffset)
+{
+	fdt32_t *markerp;
+	int nextoffset;
+	int err;
+
+	FDT_RW_PROBE(fdt);
+
+	nextoffset = fdt_check_prop_offset_(fdt, fdt_property);
+	if (nextoffset < 0)
+		return nextoffset;
+
+	/*
+	 * We need the properties meta data.
+	 * fdt_check_prop_offset_() uses fdt_next_tag() to check the property.
+	 * fdt_next_tag() skipped meta data.
+	 * Get the tag right after the property using an explicitly call to
+	 * fdt_next_tag_full()
+	 */
+	fdt_next_tag_full(fdt, fdt_property, &nextoffset);
+	if (nextoffset < 0)
+		return nextoffset;
+
+	markerp = fdt_offset_ptr_w_(fdt, nextoffset);
+
+	/* Insert the propmarker at next_offset */
+	err = fdt_splice_struct_(fdt, markerp, 0, FDT_TAGSIZE + FDT_CELLSIZE);
+	if (err)
+		return err;
+
+	*(markerp++) = cpu_to_fdt32(FDT_REF_LOCAL);
+	*markerp = cpu_to_fdt32(propoffset);
+
+	return 0;
+}
+
+int fdt_add_exportsym_(void *fdt, int nodeoffset, const char *name,
+		       uint32_t phandle)
+{
+	int offset, nextoffset;
+	int namelen, exportlen;
+	uint32_t tag;
+	char *p;
+	int err;
+
+	FDT_RW_PROBE(fdt);
+
+	nextoffset = fdt_check_node_offset_(fdt, nodeoffset);
+	if (nextoffset < 0)
+		return nextoffset;
+
+	/*
+	 * Try to place the new export tag after the node's properties (if any)
+	 * get_next_tag() skipped meta data and so already present meta-data
+	 * will be skipped.
+	 * This is ok. The new export tag will be place after potential existing
+	 * meta data.
+	 */
+	tag = fdt_next_tag(fdt, nodeoffset, &nextoffset);
+	/* the fdt_check_node_offset_() should ensure this never hits */
+	if (!can_assume(LIBFDT_FLAWLESS) && (tag != FDT_BEGIN_NODE))
+		return -FDT_ERR_INTERNAL;
+	do {
+		offset = nextoffset;
+		tag = fdt_next_tag(fdt, offset, &nextoffset);
+	} while ((tag == FDT_PROP) || (tag == FDT_NOP));
+
+	p = fdt_offset_ptr_w_(fdt, offset);
+	namelen = strlen(name);
+	exportlen = FDT_TAGSIZE + FDT_CELLALIGN(namelen+1) + FDT_CELLSIZE;
+
+	err = fdt_splice_struct_(fdt, p, 0, exportlen);
+	if (err)
+		return err;
+
+	*((fdt32_t *)p) = cpu_to_fdt32(FDT_EXPORT_SYM);
+	memset(p + FDT_TAGSIZE, 0, FDT_CELLALIGN(namelen+1));
+	memcpy(p + FDT_TAGSIZE, name, namelen);
+	p += exportlen - FDT_CELLSIZE;
+	*((fdt32_t *)p) = cpu_to_fdt32(phandle);
+
+	return 0;
+}
+
 int fdt_add_subnode_namelen(void *fdt, int parentoffset,
 			    const char *name, int namelen)
 {

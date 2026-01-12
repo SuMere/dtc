@@ -25,6 +25,10 @@ int fdt_check_node_offset_(const void *fdt, int offset);
 int fdt_check_prop_offset_(const void *fdt, int offset);
 
 int fdt_getprop_offset(const void *fdt, int nodeoffset, const char *name);
+int fdt_mark_property_ref_local_(void *fdt, int fdt_property,
+				 uint32_t propoffset);
+int fdt_add_exportsym_(void *fdt, int nodeoffset, const char *name,
+		       uint32_t phandle);
 
 const char *fdt_find_string_len_(const char *strtab, int tabsize, const char *s,
 				 int s_len);
