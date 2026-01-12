@@ -336,6 +336,7 @@ int main(int argc, char *argv[])
 	update_phandles_ref(dti);
 	mark_local_phandles(dti);
 
+	update_exports_ref(dti);
 	mark_local_exports(dti);
 
 	/*

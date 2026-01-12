@@ -368,6 +368,7 @@ void generate_local_fixups_tree(struct dt_info *dti, const char *name);
 void update_phandles_ref(struct dt_info *dti);
 void mark_local_phandles(struct dt_info *dti);
 
+void update_exports_ref(struct dt_info *dti);
 void mark_local_exports(struct dt_info *dti);
 
 /* Checks */

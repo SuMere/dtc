@@ -1304,6 +1304,36 @@ void mark_local_phandles(struct dt_info *dti)
 	mark_local_phandles_internal(dti, dti->dt);
 }
 
+static void update_exports_ref_internal(struct dt_info *dti, struct node *node)
+{
+	struct node *c;
+	struct symbol *exportsym;
+	struct node *refnode;
+
+	for_each_symbol(node->exportsymlist, exportsym) {
+		if (exportsym->ref)
+			continue;
+
+		if (exportsym->is_local) {
+			refnode = get_node_by_phandle(dti->dt, exportsym->phandle);
+			if (!refnode)
+				die("Node not found for phandle 0x%"PRIx32"\n", exportsym->phandle);
+
+			exportsym->ref = refnode->fullpath;
+		} else {
+			die("Found a non local phandle without a reference\n");
+		}
+	}
+
+	for_each_child(node, c)
+		update_exports_ref_internal(dti, c);
+}
+
+void update_exports_ref(struct dt_info *dti)
+{
+	update_exports_ref_internal(dti, dti->dt);
+}
+
 static void mark_local_exports_internal(struct dt_info *dti,
 					struct node *node)
 {
