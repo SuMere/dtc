@@ -486,7 +486,6 @@ ERROR(duplicate_label, check_duplicate_label_node, NULL);
 static cell_t check_phandle_prop(struct check *c, struct dt_info *dti,
 				 struct node *node, const char *propname)
 {
-	struct node *root = dti->dt;
 	struct property *prop;
 	struct marker *m;
 	cell_t phandle;
@@ -504,7 +503,7 @@ static cell_t check_phandle_prop(struct check *c, struct dt_info *dti,
 	m = prop->val.markers;
 	for_each_marker_of_type(m, REF_PHANDLE) {
 		assert(m->offset == 0);
-		if (node != get_node_by_ref(root, m->ref))
+		if (node != dti_get_node_by_ref(dti, m->ref))
 			/* "Set this node's phandle equal to some
 			 * other node's phandle".  That's nonsensical
 			 * by construction. */ {
@@ -614,7 +613,7 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 		for_each_marker_of_type(m, REF_PHANDLE) {
 			assert(m->offset + sizeof(cell_t) <= prop->val.len);
 
-			refnode = get_node_by_ref(dt, m->ref);
+			refnode = dti_get_node_by_ref(dti, m->ref);
 			if (! refnode) {
 				if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON)))
 					FAIL(c, dti, node, "Reference to non-existent node or "
@@ -633,7 +632,7 @@ static void fixup_phandle_references(struct check *c, struct dt_info *dti,
 	}
 
 	for_each_symbol(node->exportsymlist, exportsym) {
-		refnode = get_node_by_ref(dt, exportsym->ref);
+		refnode = dti_get_node_by_ref(dti, exportsym->ref);
 		if (!refnode) {
 			if (!(dti->dtsflags & (DTSF_PLUGIN | DTSF_ADDON))) {
 				FAIL(c, dti, node,
@@ -657,7 +656,6 @@ ERROR(phandle_references, fixup_phandle_references, NULL,
 static void fixup_path_references(struct check *c, struct dt_info *dti,
 				  struct node *node)
 {
-	struct node *dt = dti->dt;
 	struct property *prop;
 
 	for_each_property(node, prop) {
@@ -668,7 +666,7 @@ static void fixup_path_references(struct check *c, struct dt_info *dti,
 		for_each_marker_of_type(m, REF_PATH) {
 			assert(m->offset <= prop->val.len);
 
-			refnode = get_node_by_ref(dt, m->ref);
+			refnode = dti_get_node_by_ref(dti, m->ref);
 			if (!refnode) {
 				FAIL(c, dti, node, "Reference to non-existent node or label \"%s\"\n",
 				     m->ref);

@@ -748,7 +748,7 @@ static struct node *get_node_by_phandle(struct node *tree, cell_t phandle)
 	return NULL;
 }
 
-struct node *get_node_by_ref(struct node *tree, const char *ref)
+static struct node *get_node_by_ref(struct node *tree, const char *ref)
 {
 	struct node *target = tree;
 	const char *label = NULL, *path = NULL;
@@ -817,6 +817,19 @@ struct node *dti_get_node_by_phandle(struct dt_info *dti, cell_t phandle)
 
 	if (dti->dt) {
 		node = get_node_by_phandle(dti->dt, phandle);
+		if (node)
+			return node;
+	}
+
+	return NULL;
+}
+
+struct node *dti_get_node_by_ref(struct dt_info *dti, const char *ref)
+{
+	struct node *node;
+
+	if (dti->dt) {
+		node = get_node_by_ref(dti->dt, ref);
 		if (node)
 			return node;
 	}
@@ -1407,7 +1420,7 @@ static void mark_local_phandles_internal(struct dt_info *dti,
 	for_each_property(node, prop) {
 		m = prop->val.markers;
 		for_each_marker_of_type(m, REF_PHANDLE) {
-			refnode = get_node_by_ref(dti->dt, m->ref);
+			refnode = dti_get_node_by_ref(dti, m->ref);
 			if (refnode)
 				m->is_local = true;
 		}
@@ -1460,7 +1473,7 @@ static void mark_local_exports_internal(struct dt_info *dti,
 	struct node *refnode;
 
 	for_each_symbol(node->exportsymlist, exportsym) {
-		refnode = get_node_by_ref(dti->dt, exportsym->ref);
+		refnode = dti_get_node_by_ref(dti, exportsym->ref);
 		if (refnode)
 			exportsym->is_local = true;
 	}
