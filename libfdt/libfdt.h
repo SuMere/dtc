@@ -15,7 +15,7 @@ extern "C" {
 
 #define FDT_FIRST_SUPPORTED_VERSION	0x02
 #define FDT_LAST_COMPATIBLE_VERSION	0x10
-#define FDT_LAST_SUPPORTED_VERSION	0x11
+#define FDT_LAST_SUPPORTED_VERSION	0x12
 
 /* Error codes: informative error codes */
 #define FDT_ERR_NOTFOUND	1

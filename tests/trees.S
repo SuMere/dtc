@@ -17,7 +17,7 @@
 	fdtlong	(\tree\()_struct - \tree)
 	fdtlong	(\tree\()_strings - \tree)
 	fdtlong	(\tree\()_rsvmap - \tree)
-	fdtlong	0x11
+	fdtlong	0x12
 	fdtlong	0x10
 	fdtlong	0
 	fdtlong	(\tree\()_strings_end - \tree\()_strings)

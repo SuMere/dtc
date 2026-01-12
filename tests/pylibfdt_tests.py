@@ -288,7 +288,7 @@ class PyLibfdtBasicTests(unittest.TestCase):
         self.assertEqual(self.fdt.off_dt_struct(), 88)
         self.assertEqual(self.fdt.off_dt_strings(), 652)
         self.assertEqual(self.fdt.off_mem_rsvmap(), 40)
-        self.assertEqual(self.fdt.version(), 17)
+        self.assertEqual(self.fdt.version(), 18)
         self.assertEqual(self.fdt.last_comp_version(), 16)
         self.assertEqual(self.fdt.boot_cpuid_phys(), 0)
         self.assertEqual(self.fdt.size_dt_strings(), 105)
