@@ -1141,6 +1141,12 @@ metadata_tests() {
 		sed -i '/^\/\/ /d' $dt.dtb.dts.dtb.out
 		base_run_test check_diff $dt.dtb.dts.dtb.out "$SRCDIR/$dt.dtb.expect"
 	done
+
+	run_dtc_test -I dts -O dtb -o metadata_dtflags0.dtb "$SRCDIR/metadata_dtflags0.dts"
+	base_run_test wrap_fdtdump metadata_dtflags0.dtb metadata_dtflags0.dtb.out
+	# Keep only lines containing 'dt_flags'
+	sed -i '/dt_flags/!d' metadata_dtflags0.dtb.out
+	base_run_test check_diff metadata_dtflags0.dtb.out "$SRCDIR/metadata_dtflags0.dtb.expect"
 }
 
 pylibfdt_tests () {
