@@ -533,7 +533,6 @@ static cell_t check_phandle_prop(struct check *c, struct dt_info *dti,
 static void check_explicit_phandles(struct check *c, struct dt_info *dti,
 				    struct node *node)
 {
-	struct node *root = dti->dt;
 	struct node *other;
 	cell_t phandle, linux_phandle;
 
@@ -555,7 +554,7 @@ static void check_explicit_phandles(struct check *c, struct dt_info *dti,
 	if (linux_phandle && !phandle)
 		phandle = linux_phandle;
 
-	other = get_node_by_phandle(root, phandle);
+	other = dti_get_node_by_phandle(dti, phandle);
 	if (other && (other != node)) {
 		FAIL(c, dti, node, "duplicated phandle 0x%x (seen before at %s)",
 		     phandle, other->fullpath);
@@ -1414,7 +1413,6 @@ static void check_property_phandle_args(struct check *c,
 					struct property *prop,
 					const struct provider *provider)
 {
-	struct node *root = dti->dt;
 	unsigned int cell, cellsize = 0;
 
 	if (!is_multiple_of(prop->val.len, sizeof(cell_t))) {
@@ -1457,7 +1455,7 @@ static void check_property_phandle_args(struct check *c,
 					  cell);
 		}
 
-		provider_node = get_node_by_phandle(root, phandle);
+		provider_node = dti_get_node_by_phandle(dti, phandle);
 		if (!provider_node) {
 			FAIL_PROP(c, dti, node, prop,
 				  "Could not get phandle node for (cell %d)",
@@ -1624,7 +1622,6 @@ static void check_interrupt_map(struct check *c,
 				struct dt_info *dti,
 				struct node *node)
 {
-	struct node *root = dti->dt;
 	struct property *prop, *irq_map_prop;
 	size_t cellsize, cell, map_cells;
 
@@ -1678,7 +1675,7 @@ static void check_interrupt_map(struct check *c,
 			break;
 		}
 
-		provider_node = get_node_by_phandle(root, phandle);
+		provider_node = dti_get_node_by_phandle(dti, phandle);
 		if (!provider_node) {
 			FAIL_PROP(c, dti, node, irq_map_prop,
 				  "Could not get phandle(%d) node for (cell %zu)",
@@ -1716,7 +1713,6 @@ static void check_interrupts_property(struct check *c,
 				      struct dt_info *dti,
 				      struct node *node)
 {
-	struct node *root = dti->dt;
 	struct node *irq_node = NULL, *parent = node;
 	struct property *irq_prop, *prop = NULL;
 	cell_t irq_cells, phandle;
@@ -1747,7 +1743,7 @@ static void check_interrupts_property(struct check *c,
 				continue;
 			}
 
-			irq_node = get_node_by_phandle(root, phandle);
+			irq_node = dti_get_node_by_phandle(dti, phandle);
 			if (!irq_node) {
 				FAIL_PROP(c, dti, parent, prop, "Bad phandle");
 				return;
@@ -1882,7 +1878,7 @@ static struct node *get_remote_endpoint(struct check *c, struct dt_info *dti,
 	if (!phandle_is_valid(phandle))
 		return NULL;
 
-	node = get_node_by_phandle(dti->dt, phandle);
+	node = dti_get_node_by_phandle(dti, phandle);
 	if (!node)
 		FAIL_PROP(c, dti, endpoint, prop, "graph phandle is not valid");
 

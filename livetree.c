@@ -722,7 +722,7 @@ static cell_t get_node_phandle_existing(struct node *node)
 	return propval_cell(prop);
 }
 
-struct node *get_node_by_phandle(struct node *tree, cell_t phandle)
+static struct node *get_node_by_phandle(struct node *tree, cell_t phandle)
 {
 	struct node *child, *node;
 	cell_t tree_phandle;
@@ -804,6 +804,19 @@ struct node *dti_get_node_by_label(struct dt_info *dti, const char *label)
 
 	if (dti->dt) {
 		node = get_node_by_label(dti->dt, label);
+		if (node)
+			return node;
+	}
+
+	return NULL;
+}
+
+struct node *dti_get_node_by_phandle(struct dt_info *dti, cell_t phandle)
+{
+	struct node *node;
+
+	if (dti->dt) {
+		node = get_node_by_phandle(dti->dt, phandle);
 		if (node)
 			return node;
 	}
@@ -1362,7 +1375,7 @@ static void update_phandles_ref_internal(struct dt_info *dti, struct node *node)
 			if (m->is_local) {
 				phandle = propval_cell_n(prop,
 							 m->offset / sizeof(cell_t));
-				refnode = get_node_by_phandle(dti->dt, phandle);
+				refnode = dti_get_node_by_phandle(dti, phandle);
 				if (!refnode)
 					die("Node not found for phandle 0x%"PRIx32"\n", phandle);
 
@@ -1420,7 +1433,7 @@ static void update_exports_ref_internal(struct dt_info *dti, struct node *node)
 			continue;
 
 		if (exportsym->is_local) {
-			refnode = get_node_by_phandle(dti->dt, exportsym->phandle);
+			refnode = dti_get_node_by_phandle(dti, exportsym->phandle);
 			if (!refnode)
 				die("Node not found for phandle 0x%"PRIx32"\n", exportsym->phandle);
 
