@@ -334,6 +334,7 @@ int main(int argc, char *argv[])
 	}
 
 	update_phandles_ref(dti);
+	mark_local_phandles(dti);
 
 	process_checks(force, dti);
 

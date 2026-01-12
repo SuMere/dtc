@@ -1196,3 +1196,29 @@ void update_phandles_ref(struct dt_info *dti)
 {
 	update_phandles_ref_internal(dti, dti->dt);
 }
+
+static void mark_local_phandles_internal(struct dt_info *dti,
+					 struct node *node)
+{
+	struct node *c;
+	struct property *prop;
+	struct marker *m;
+	struct node *refnode;
+
+	for_each_property(node, prop) {
+		m = prop->val.markers;
+		for_each_marker_of_type(m, REF_PHANDLE) {
+			refnode = get_node_by_ref(dti->dt, m->ref);
+			if (refnode)
+				m->is_local = true;
+		}
+	}
+
+	for_each_child(node, c)
+		mark_local_phandles_internal(dti, c);
+}
+
+void mark_local_phandles(struct dt_info *dti)
+{
+	mark_local_phandles_internal(dti, dti->dt);
+}
