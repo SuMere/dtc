@@ -57,8 +57,9 @@ static void dump_blob(void *blob, bool debug)
 	const char *p_strings = (const char *)blob + off_str;
 	uint32_t version = fdt32_to_cpu(bph->version);
 	uint32_t totalsize = fdt32_to_cpu(bph->totalsize);
-	uint32_t tag;
+	uint32_t tag, offset;
 	const char *p, *s, *t;
+	const char *last_prop_name = NULL;
 	int depth, sz, shift;
 	int i;
 	uint64_t addr, size;
@@ -105,6 +106,7 @@ static void dump_blob(void *blob, bool debug)
 		        (uintptr_t)p - blob_off - 4, tag, tagname(tag));
 
 		if (tag == FDT_BEGIN_NODE) {
+			last_prop_name = NULL;
 			s = p;
 			p = PALIGN(p + strlen(s) + 1, 4);
 
@@ -118,6 +120,7 @@ static void dump_blob(void *blob, bool debug)
 		}
 
 		if (tag == FDT_END_NODE) {
+			last_prop_name = NULL;
 			depth--;
 
 			printf("%*s};\n", depth * shift, "");
@@ -143,6 +146,15 @@ static void dump_blob(void *blob, bool debug)
 			printf("%*s%s", depth * shift, "", s);
 			utilfdt_print_data(t, sz);
 			printf(";\n");
+			last_prop_name = s;
+			continue;
+		}
+
+		if (tag == FDT_REF_LOCAL) {
+			offset = fdt32_to_cpu(GET_CELL(p));
+
+			printf("%*s// [FDT_REF_LOCAL] %s[%"PRIu32"]\n", depth * shift, "",
+				last_prop_name, offset);
 			continue;
 		}
 

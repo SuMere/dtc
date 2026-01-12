@@ -161,7 +161,7 @@ const void *fdt_offset_ptr(const void *fdt, int offset, unsigned int len)
 
 uint32_t fdt_next_tag_full(const void *fdt, int startoffset, int *nextoffset)
 {
-	const fdt32_t *tagp, *lenp;
+	const fdt32_t *tagp, *lenp, *tmp32p;
 	uint32_t tag, len, sum;
 	int offset = startoffset;
 	const char *p;
@@ -209,6 +209,14 @@ uint32_t fdt_next_tag_full(const void *fdt, int startoffset, int *nextoffset)
 	case FDT_NOP:
 		break;
 
+	case FDT_REF_LOCAL:
+		/* Skip offset value */
+		tmp32p = fdt_offset_ptr(fdt, offset, sizeof(*tmp32p));
+		if (!can_assume(VALID_DTB) && !tmp32p)
+			return FDT_END; /* premature end */
+		offset += sizeof(fdt32_t);
+		break;
+
 	default:
 		return FDT_END;
 	}
@@ -239,9 +247,21 @@ uint32_t fdt_next_tag(const void *fdt, int startoffset, int *nextoffset)
 		case FDT_PROP:
 		case FDT_NOP:
 		case FDT_END:
-			/* Next tag is not new tag introduced in v18 -> Ok */
+			/*
+			 * Next tag is not a meta-data tag -> Ok this next tag
+			 * has to be handle by fd_next_tag().
+			 * Filter out any potential meta-data tag returning
+			 * nextoffset pointing to this current next tag.
+			 */
 			*nextoffset = tmp_offset;
 			return tag;
+
+		case FDT_REF_LOCAL:
+			/*
+			 * Next tag is a meta-data tag present in the middle
+			 * of the structure -> Skip it and look at next one
+			 */
+			break;
 
 		default:
 			break;

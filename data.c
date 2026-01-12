@@ -288,6 +288,7 @@ struct marker *alloc_marker(unsigned int offset, enum markertype type,
 	m->type = type;
 	m->ref = ref;
 	m->next = NULL;
+	m->is_local = 0;
 
 	return m;
 }

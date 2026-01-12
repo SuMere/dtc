@@ -13,6 +13,7 @@
 #define FTF_STRTABSIZE	0x10
 #define FTF_STRUCTSIZE	0x20
 #define FTF_NOPS	0x40
+#define FTF_REF_XXX	0x80
 
 static struct version_info {
 	int version;
@@ -31,7 +32,7 @@ static struct version_info {
 	{17, 16, FDT_V17_SIZE,
 	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS},
 	{18, 18, FDT_V18_SIZE,
-	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS},
+	 FTF_BOOTCPUID|FTF_STRTABSIZE|FTF_STRUCTSIZE|FTF_NOPS|FTF_REF_XXX},
 };
 
 struct emitter {
@@ -42,6 +43,7 @@ struct emitter {
 	void (*beginnode)(void *, struct label *labels);
 	void (*endnode)(void *, struct label *labels);
 	void (*property)(void *, struct label *labels);
+	void (*ref_local)(void *);
 };
 
 static void bin_emit_cell(void *e, cell_t val)
@@ -91,6 +93,11 @@ static void bin_emit_property(void *e, struct label *labels)
 	bin_emit_cell(e, FDT_PROP);
 }
 
+static void bin_emit_ref_local(void *e)
+{
+	bin_emit_cell(e, FDT_REF_LOCAL);
+}
+
 static struct emitter bin_emitter = {
 	.cell = bin_emit_cell,
 	.string = bin_emit_string,
@@ -99,6 +106,7 @@ static struct emitter bin_emitter = {
 	.beginnode = bin_emit_beginnode,
 	.endnode = bin_emit_endnode,
 	.property = bin_emit_property,
+	.ref_local = bin_emit_ref_local,
 };
 
 static void emit_label(FILE *f, const char *prefix, const char *label)
@@ -210,6 +218,14 @@ static void asm_emit_property(void *e, struct label *labels)
 	asm_emit_cell(e, FDT_PROP);
 }
 
+static void asm_emit_ref_local(void *e)
+{
+	FILE *f = e;
+
+	fprintf(f, "\t/* FDT_REF_LOCAL */\n");
+	asm_emit_cell(e, FDT_REF_LOCAL);
+}
+
 static struct emitter asm_emitter = {
 	.cell = asm_emit_cell,
 	.string = asm_emit_string,
@@ -218,6 +234,7 @@ static struct emitter asm_emitter = {
 	.beginnode = asm_emit_beginnode,
 	.endnode = asm_emit_endnode,
 	.property = asm_emit_property,
+	.ref_local = asm_emit_ref_local,
 };
 
 static int stringtable_insert(struct data *d, const char *str)
@@ -242,6 +259,7 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 	struct property *prop;
 	struct node *child;
 	bool seen_name_prop = false;
+	struct marker *m;
 
 	if (tree->deleted)
 		return;
@@ -272,6 +290,17 @@ static void flatten_tree(struct node *tree, struct emitter *emit,
 
 		emit->data(etarget, prop->val);
 		emit->align(etarget, sizeof(cell_t));
+
+		if (vi->flags & FTF_REF_XXX) {
+			m = prop->val.markers;
+			for_each_marker_of_type(m, REF_PHANDLE) {
+				if (m->is_local) {
+					emit->ref_local(etarget);
+					emit->cell(etarget, m->offset);
+					continue;
+				}
+			}
+		}
 	}
 
 	if ((vi->flags & FTF_NAMEPROPS) && !seen_name_prop) {
@@ -737,6 +766,7 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 	struct node *node;
 	const char *flatname;
 	uint32_t val;
+	uint32_t offset;
 
 	node = build_node(NULL, NULL, NULL);
 
@@ -751,6 +781,7 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 	do {
 		struct property *prop;
 		struct node *child;
+		struct marker *m;
 
 		val = flat_read_word(dtbuf);
 		switch (val) {
@@ -780,6 +811,17 @@ static struct node *unflatten_tree(struct inbuf *dtbuf,
 					" version <16\n");
 
 			/* Ignore */
+			break;
+
+		case FDT_REF_LOCAL:
+			if (!(flags & FTF_REF_XXX))
+				die("REF_LOCAL tag found in flat tree"
+				    " version <18\n");
+
+			offset = flat_read_word(dtbuf);
+			m = alloc_marker(offset, REF_PHANDLE, NULL);
+			m->is_local = true;
+			prop->val = data_append_markers(prop->val, m);
 			break;
 
 		default:
@@ -899,6 +941,9 @@ struct dt_info *dt_from_blob(const char *fname)
 	} else {
 		flags |= FTF_NOPS;
 	}
+
+	if (version >= 18)
+		flags |= FTF_REF_XXX;
 
 	inbuf_init(&memresvbuf,
 		   blob + off_mem_rsvmap, blob + totalsize);

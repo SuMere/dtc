@@ -128,6 +128,7 @@ struct  marker {
 	enum markertype type;
 	unsigned int offset;
 	char *ref;
+	bool is_local;
 	struct marker *next;
 };
 
