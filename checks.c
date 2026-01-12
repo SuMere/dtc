@@ -317,7 +317,12 @@ ERROR(duplicate_property_names, check_duplicate_property_names, NULL);
 static void check_node_name_chars(struct check *c, struct dt_info *dti,
 				  struct node *node)
 {
-	size_t n = strspn(node->name, c->data);
+	size_t n;
+
+	if ((dti->dtsflags & DTSF_ADDON) && node->ref)
+		return; /* Checking name doesn't make sense for an orphan node */
+
+	n = strspn(node->name, c->data);
 
 	if (n < strlen(node->name))
 		FAIL(c, dti, node, "Bad character '%c' in node name",
@@ -328,7 +333,12 @@ ERROR(node_name_chars, check_node_name_chars, NODECHARS);
 static void check_node_name_chars_strict(struct check *c, struct dt_info *dti,
 					 struct node *node)
 {
-	size_t n = strspn(node->name, c->data);
+	size_t n;
+
+	if ((dti->dtsflags & DTSF_ADDON) && node->ref)
+		return; /* Checking name doesn't make sense for an orphan node */
+
+	n = strspn(node->name, c->data);
 
 	if (n < node->basenamelen)
 		FAIL(c, dti, node, "Character '%c' not recommended in node name",

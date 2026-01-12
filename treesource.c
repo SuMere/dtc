@@ -12,11 +12,13 @@ extern YYLTYPE yylloc;
 
 struct dt_info *parser_output;
 bool treesource_error;
+struct node *parser_orphanlist;
 
 struct dt_info *dt_from_source(const char *fname)
 {
 	parser_output = NULL;
 	treesource_error = false;
+	parser_orphanlist = NULL;
 
 	srcfile_push(fname);
 	yyin = current_srcfile->f;
