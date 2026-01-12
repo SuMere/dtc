@@ -1303,3 +1303,26 @@ void mark_local_phandles(struct dt_info *dti)
 {
 	mark_local_phandles_internal(dti, dti->dt);
 }
+
+static void mark_local_exports_internal(struct dt_info *dti,
+					struct node *node)
+{
+	struct node *c;
+	struct symbol *exportsym;
+	struct node *refnode;
+
+	for_each_symbol(node->exportsymlist, exportsym) {
+		refnode = get_node_by_ref(dti->dt, exportsym->ref);
+		if (refnode)
+			exportsym->is_local = true;
+	}
+
+	for_each_child(node, c)
+		mark_local_exports_internal(dti, c);
+}
+
+void mark_local_exports(struct dt_info *dti)
+{
+	mark_local_exports_internal(dti, dti->dt);
+
+}

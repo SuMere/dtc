@@ -336,6 +336,8 @@ int main(int argc, char *argv[])
 	update_phandles_ref(dti);
 	mark_local_phandles(dti);
 
+	mark_local_exports(dti);
+
 	/*
 	 * With FDT_REF_PHANDLE added in dtbs, we need to identified
 	 * if some unresolved phandle references are allowed in the dtb
