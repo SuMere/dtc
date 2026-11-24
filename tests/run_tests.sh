@@ -1256,6 +1256,24 @@ fdtaddon_tests() {
 
 	run_dtc_test -I dtb -O dts -o fdtaddon_realistic_addon-merged.dtb.dts fdtaddon_realistic_addon-merged.dtb
 	check_dts fdtaddon_realistic_addon-merged.dtb.dts
+
+	# Export symbols added by an overlay and used by an addon
+	run_dtc_test -@ -I dts -O dtb -o fdtaddon_overlay_export_base.dtb "$SRCDIR/fdtaddon_overlay_export_base.dts"
+	check_dtb fdtaddon_overlay_export_base.dtb
+
+	run_dtc_test -I dts -O dtb -o fdtaddon_overlay_export.dtbo "$SRCDIR/fdtaddon_overlay_export.dtso"
+	check_dtb fdtaddon_overlay_export.dtbo
+
+	run_wrap_test $FDTOVERLAY -i fdtaddon_overlay_export_base.dtb -o fdtaddon_overlay_export-merged.dtb \
+		      fdtaddon_overlay_export.dtbo
+	check_dtb fdtaddon_overlay_export-merged.dtb
+
+	run_fdtaddon_test -i fdtaddon_overlay_export-merged.dtb -o fdtaddon_overlay_export_addon-merged.dtb \
+			  -t "/connector-a" fdtaddon_realistic_addon.dtba
+	check_dtb fdtaddon_overlay_export_addon-merged.dtb
+
+	run_dtc_test -I dtb -O dts -o fdtaddon_overlay_export_addon-merged.dtb.dts fdtaddon_overlay_export_addon-merged.dtb
+	check_dts fdtaddon_overlay_export_addon-merged.dtb.dts
 }
 
 pylibfdt_tests () {

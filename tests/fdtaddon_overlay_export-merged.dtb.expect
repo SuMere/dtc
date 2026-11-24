@@ -1,0 +1,71 @@
+/dts-v1/;
+
+/ {
+    connector-a {
+        phandle = <0x00000005>;
+        gpio-map = <0x00000000 0x00000000 0x00000001 0x0000000a 0x00000000 0x00000001 0x00000000 0x00000004 0x00000003 0x00000000>;
+        gpio-map-pass-thru = <0x00000000 0x0000000f>;
+        gpio-map-mask = <0x0000000f 0x00000000>;
+        #gpio-cells = <0x00000002>;
+        interrupt-map = <0x00000000 0x00000000 0x00000001 0x0000000a 0x00000000 0x00000000 0x00000100 0x00000001 0x0000000a 0x00000100 0x00000001 0x00000000 0x00000004 0x00000003 0x00000000 0x00000001 0x00000100 0x00000004 0x00000003 0x00000100>;
+        #interrupt-cells = <0x00000002>;
+        #address-cells = <0x00000000>;
+        compatible = "abc,foo-connector";
+        // [FDT_EXPORT_SYM] 'connector' -> phandle 0x00000005
+        // [FDT_EXPORT_SYM] 'conn_i2c' -> phandle 0x00000006
+        // [FDT_EXPORT_SYM] 'conn_5v' -> phandle 0x00000002
+        conn-i2c {
+            phandle = <0x00000006>;
+            #size-cells = <0x00000000>;
+            #address-cells = <0x00000001>;
+            i2c-parent = <0x00000003>;
+            compatible = "i2c-bus-extension";
+        };
+    };
+    regulator {
+        compatible = "regulator-fixed";
+        regulator-min-microvolt = <0x004c4b40>;
+        regulator-max-microvolt = <0x004c4b40>;
+        gpios = <0x00000001 0x00000005 0x00000000>;
+        // [FDT_REF_LOCAL] gpios[0]
+        phandle = <0x00000002>;
+    };
+    soc {
+        compatible = "simple-bus";
+        #address-cells = <0x00000001>;
+        #size-cells = <0x00000001>;
+        i2c@1000 {
+            compatible = "xyz,i2c-controller";
+            reg = <0x00001000 0x00000100>;
+            #address-cells = <0x00000001>;
+            #size-cells = <0x00000000>;
+            phandle = <0x00000003>;
+        };
+        gpio@2000 {
+            compatible = "xyz,gpio-controller";
+            reg = <0x00002000 0x00000100>;
+            gpio-controller;
+            #gpio-cells = <0x00000002>;
+            interrupt-controller;
+            #interrupt-cells = <0x00000002>;
+            #address-cells = <0x00000000>;
+            phandle = <0x00000001>;
+        };
+        gpio@3000 {
+            compatible = "xyz,gpio-controller";
+            reg = <0x00003000 0x00000100>;
+            gpio-controller;
+            #gpio-cells = <0x00000002>;
+            interrupt-controller;
+            #interrupt-cells = <0x00000002>;
+            #address-cells = <0x00000000>;
+            phandle = <0x00000004>;
+        };
+    };
+    __symbols__ {
+        conn_a_5v = "/regulator";
+        i2c1 = "/soc/i2c@1000";
+        gpio1 = "/soc/gpio@2000";
+        gpio2 = "/soc/gpio@3000";
+    };
+};

@@ -1,0 +1,50 @@
+/dts-v1/;
+
+/ {
+    regulator {
+        compatible = "regulator-fixed";
+        regulator-min-microvolt = <0x004c4b40>;
+        regulator-max-microvolt = <0x004c4b40>;
+        gpios = <0x00000001 0x00000005 0x00000000>;
+        // [FDT_REF_LOCAL] gpios[0]
+        phandle = <0x00000002>;
+    };
+    soc {
+        compatible = "simple-bus";
+        #address-cells = <0x00000001>;
+        #size-cells = <0x00000001>;
+        i2c@1000 {
+            compatible = "xyz,i2c-controller";
+            reg = <0x00001000 0x00000100>;
+            #address-cells = <0x00000001>;
+            #size-cells = <0x00000000>;
+            phandle = <0x00000003>;
+        };
+        gpio@2000 {
+            compatible = "xyz,gpio-controller";
+            reg = <0x00002000 0x00000100>;
+            gpio-controller;
+            #gpio-cells = <0x00000002>;
+            interrupt-controller;
+            #interrupt-cells = <0x00000002>;
+            #address-cells = <0x00000000>;
+            phandle = <0x00000001>;
+        };
+        gpio@3000 {
+            compatible = "xyz,gpio-controller";
+            reg = <0x00003000 0x00000100>;
+            gpio-controller;
+            #gpio-cells = <0x00000002>;
+            interrupt-controller;
+            #interrupt-cells = <0x00000002>;
+            #address-cells = <0x00000000>;
+            phandle = <0x00000004>;
+        };
+    };
+    __symbols__ {
+        conn_a_5v = "/regulator";
+        i2c1 = "/soc/i2c@1000";
+        gpio1 = "/soc/gpio@2000";
+        gpio2 = "/soc/gpio@3000";
+    };
+};

@@ -642,6 +642,259 @@ static int overlay_update_local_conflicting_references(void *fdto,
 }
 
 /**
+ * overlay_exportsym_phandle_offset - Get the offset of an export symbol phandle
+ * @fdt: Device tree blob
+ * @exportsym: Offset of a FDT_EXPORT_SYM or FDT_EXPORT_SYM_REF tag
+ *
+ * Both tags store their name followed by a phandle cell. A FDT_EXPORT_SYM_REF
+ * tag also stores the external label right after the phandle cell.
+ *
+ * returns:
+ *      offset of the phandle cell on success
+ *      Negative error code on failure
+ */
+static int overlay_exportsym_phandle_offset(const void *fdt, int exportsym)
+{
+	const char *name;
+
+	name = fdt_exportsym_get_name_(fdt, exportsym);
+	if (!name)
+		return -FDT_ERR_BADSTRUCTURE;
+
+	return FDT_CELLALIGN(exportsym + FDT_TAGSIZE + strlen(name) + 1);
+}
+
+/**
+ * overlay_resolve_exportsym_refs - Resolve the overlay export symbol references
+ * @fdt: Base Device Tree blob
+ * @fdto: Device tree overlay blob
+ *
+ * A FDT_EXPORT_SYM_REF tag exports a node of the base device tree through its
+ * label. overlay_resolve_exportsym_refs() looks up each label in the base
+ * __symbols__ node and stores the phandle of the referenced node in the tag.
+ * A phandle is created for the referenced node if it has none.
+ *
+ * This has to be done before computing the phandle delta used to shift the
+ * overlay phandles so that newly created phandles cannot conflict with them.
+ *
+ * returns:
+ *      0 on success
+ *      Negative error code on failure
+ */
+static int overlay_resolve_exportsym_refs(void *fdt, void *fdto)
+{
+	int offset, nextoffset = 0;
+	const char *label, *path;
+	int symbols_off, node;
+	uint32_t phandle;
+	fdt32_t *php;
+	uint32_t tag;
+	int len;
+	int ret;
+
+	do {
+		offset = nextoffset;
+		tag = fdt_next_tag_full(fdto, offset, &nextoffset);
+		if (tag != FDT_EXPORT_SYM_REF)
+			continue;
+
+		ret = overlay_exportsym_phandle_offset(fdto, offset);
+		if (ret < 0)
+			return ret;
+
+		php = fdt_offset_ptr_w(fdto, ret, sizeof(*php));
+		label = fdt_offset_ptr(fdto, ret + FDT_CELLSIZE, 1);
+		if (!php || !label)
+			return -FDT_ERR_BADSTRUCTURE;
+
+		/*
+		 * Look up /__symbols__ each time: creating a phandle below
+		 * can move it.
+		 */
+		symbols_off = fdt_path_offset(fdt, "/__symbols__");
+		if (symbols_off < 0)
+			return symbols_off;
+
+		path = fdt_getprop(fdt, symbols_off, label, &len);
+		if (!path)
+			return len;
+
+		node = fdt_path_offset(fdt, path);
+		if (node < 0)
+			return node;
+
+		phandle = fdt_get_phandle(fdt, node);
+		if (!phandle) {
+			ret = fdt_generate_phandle(fdt, &phandle);
+			if (ret)
+				return ret;
+
+			ret = fdt_setprop_u32(fdt, node, "phandle", phandle);
+			if (ret)
+				return ret;
+		}
+
+		fdt32_st(php, phandle);
+	} while (tag != FDT_END);
+
+	return (nextoffset < 0) ? nextoffset : 0;
+}
+
+/**
+ * overlay_adjust_local_exportsyms - Adjust the overlay export symbol phandles
+ * @fdto: Device tree overlay blob
+ * @delta: Offset to shift the phandles of
+ *
+ * FDT_EXPORT_SYM tags reference nodes of the overlay. Shift their phandle
+ * the same way overlay_adjust_local_phandles() shifts the node phandles.
+ *
+ * returns:
+ *      0 on success
+ *      Negative error code on failure
+ */
+static int overlay_adjust_local_exportsyms(void *fdto, uint32_t delta)
+{
+	int offset, nextoffset = 0;
+	uint32_t tag, val;
+	fdt32_t *php;
+	int ret;
+
+	do {
+		offset = nextoffset;
+		tag = fdt_next_tag_full(fdto, offset, &nextoffset);
+		if (tag != FDT_EXPORT_SYM)
+			continue;
+
+		ret = overlay_exportsym_phandle_offset(fdto, offset);
+		if (ret < 0)
+			return ret;
+
+		php = fdt_offset_ptr_w(fdto, ret, sizeof(*php));
+		if (!php)
+			return -FDT_ERR_BADSTRUCTURE;
+
+		val = fdt32_ld(php);
+		if (val + delta < val || val + delta == (uint32_t)-1)
+			return -FDT_ERR_NOPHANDLES;
+
+		fdt32_st(php, val + delta);
+	} while (tag != FDT_END);
+
+	return (nextoffset < 0) ? nextoffset : 0;
+}
+
+/**
+ * overlay_update_local_conflicting_exportsyms - Replace export symbol phandles
+ * @fdto: Device tree overlay blob
+ * @fdt_phandle: Value to replace phandles with
+ * @fdto_phandle: Value to be replaced
+ *
+ * Replaces all FDT_EXPORT_SYM phandles with value @fdto_phandle by
+ * @fdt_phandle.
+ *
+ * returns:
+ *      0 on success
+ *      Negative error code on failure
+ */
+static int overlay_update_local_conflicting_exportsyms(void *fdto,
+						       uint32_t fdt_phandle,
+						       uint32_t fdto_phandle)
+{
+	int offset, nextoffset = 0;
+	fdt32_t *php;
+	uint32_t tag;
+	int ret;
+
+	do {
+		offset = nextoffset;
+		tag = fdt_next_tag_full(fdto, offset, &nextoffset);
+		if (tag != FDT_EXPORT_SYM)
+			continue;
+
+		ret = overlay_exportsym_phandle_offset(fdto, offset);
+		if (ret < 0)
+			return ret;
+
+		php = fdt_offset_ptr_w(fdto, ret, sizeof(*php));
+		if (!php)
+			return -FDT_ERR_BADSTRUCTURE;
+
+		if (fdt32_ld(php) == fdto_phandle)
+			fdt32_st(php, fdt_phandle);
+	} while (tag != FDT_END);
+
+	return (nextoffset < 0) ? nextoffset : 0;
+}
+
+/**
+ * overlay_apply_node_exportsyms - Merges the export symbols of a node
+ * @fdt: Base Device Tree blob
+ * @target: Node offset in the base device tree to apply the export symbols to
+ * @fdto: Device tree overlay blob
+ * @node: Node offset in the overlay holding the export symbols to merge
+ *
+ * As for properties, an export symbol already present in @target with the
+ * same name is overridden.
+ *
+ * returns:
+ *      0 on success
+ *      Negative error code on failure
+ */
+static int overlay_apply_node_exportsyms(void *fdt, int target,
+					 void *fdto, int node)
+{
+	int exportsym, fdt_exportsym;
+	const char *name, *fdt_name;
+	uint32_t phandle;
+	fdt32_t *php;
+	int ret;
+
+	fdt_for_each_exportsym_(exportsym, fdto, node) {
+		name = fdt_exportsym_get_name_(fdto, exportsym);
+		if (!name)
+			return -FDT_ERR_BADSTRUCTURE;
+
+		phandle = fdt_exportsym_get_phandle_(fdto, exportsym);
+		if ((phandle == 0) || (phandle == ~0U))
+			return -FDT_ERR_BADPHANDLE;
+
+		fdt_for_each_exportsym_(fdt_exportsym, fdt, target) {
+			fdt_name = fdt_exportsym_get_name_(fdt, fdt_exportsym);
+			if (!fdt_name)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			if (!strcmp(fdt_name, name))
+				break;
+		}
+
+		if (fdt_exportsym >= 0) {
+			ret = overlay_exportsym_phandle_offset(fdt, fdt_exportsym);
+			if (ret < 0)
+				return ret;
+
+			php = fdt_offset_ptr_w(fdt, ret, sizeof(*php));
+			if (!php)
+				return -FDT_ERR_BADSTRUCTURE;
+
+			fdt32_st(php, phandle);
+			continue;
+		}
+
+		if (fdt_exportsym != -FDT_ERR_NOTFOUND)
+			return fdt_exportsym;
+
+		ret = fdt_add_exportsym_(fdt, target, name, phandle);
+		if (ret)
+			return ret;
+	}
+
+	if (exportsym != -FDT_ERR_NOTFOUND)
+		return exportsym;
+
+	return 0;
+}
+
+/**
  * overlay_prevent_phandle_overwrite_node - Helper function for overlay_prevent_phandle_overwrite
  * @fdt: Base Device tree blob
  * @fdtnode: Node in fdt that is checked for an overwrite
@@ -670,6 +923,12 @@ static int overlay_prevent_phandle_overwrite_node(void *fdt, int fdtnode,
 			return ret;
 
 		ret = overlay_update_local_conflicting_references(fdto,
+								  fdt_phandle,
+								  fdto_phandle);
+		if (ret)
+			return ret;
+
+		ret = overlay_update_local_conflicting_exportsyms(fdto,
 								  fdt_phandle,
 								  fdto_phandle);
 		if (ret)
@@ -770,12 +1029,12 @@ static int overlay_apply_node(void *fdt, int target,
 {
 	int property;
 	int subnode;
+	int ret;
 
 	fdt_for_each_property_offset(property, fdto, node) {
 		const char *name;
 		const void *prop;
 		int prop_len;
-		int ret;
 
 		prop = fdt_getprop_by_offset(fdto, property, &name,
 					     &prop_len);
@@ -789,10 +1048,13 @@ static int overlay_apply_node(void *fdt, int target,
 			return ret;
 	}
 
+	ret = overlay_apply_node_exportsyms(fdt, target, fdto, node);
+	if (ret)
+		return ret;
+
 	fdt_for_each_subnode(subnode, fdto, node) {
 		const char *name = fdt_get_name(fdto, subnode, NULL);
 		int nnode;
-		int ret;
 
 		nnode = fdt_add_subnode(fdt, target, name);
 		if (nnode == -FDT_ERR_EXISTS) {
@@ -1046,12 +1308,22 @@ int fdt_overlay_apply(void *fdt, void *fdto)
 	FDT_RO_PROBE(fdt);
 	FDT_RO_PROBE(fdto);
 
+	/* Resolve the export symbols referencing nodes in fdt */
+	ret = overlay_resolve_exportsym_refs(fdt, fdto);
+	if (ret)
+		goto err;
+
 	ret = fdt_find_max_phandle(fdt, &delta);
 	if (ret)
 		goto err;
 
 	/* Increase all phandles in the fdto by delta */
 	ret = overlay_adjust_local_phandles(fdto, delta);
+	if (ret)
+		goto err;
+
+	/* Increase the export symbol phandles in the fdto by delta */
+	ret = overlay_adjust_local_exportsyms(fdto, delta);
 	if (ret)
 		goto err;
 

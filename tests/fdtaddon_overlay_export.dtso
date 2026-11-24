@@ -1,0 +1,39 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (C) 2026 Bootlin
+ *
+ * Adds the connector-a node of fdtaddon_realistic_base.dts, export symbols
+ * included, using an overlay. The overlay exports nodes from the overlay
+ * itself (connector, conn_i2c) and from the base device tree (conn_5v).
+ */
+
+/dts-v1/;
+/plugin/;
+
+&{/} {
+	conn_a: connector-a {
+		compatible = "abc,foo-connector";
+		#address-cells = <0>;
+		#interrupt-cells = <2>;
+		interrupt-map = <0 0     &gpio1 10 0>,
+				<0 0x100 &gpio1 10 0x100>,
+				<1 0     &gpio2 3 0>,
+				<1 0x100 &gpio2 3 0x100>;
+		#gpio-cells = <2>;
+		gpio-map-mask = <0xf 0x0>;
+		gpio-map-pass-thru = <0x0 0xf>;
+		gpio-map = <0 0 &gpio1 10 0>,
+			   <1 0 &gpio2 3 0>;
+
+		/export/ connector: &conn_a;
+		/export/ conn_i2c: &conn_a_i2c;
+		/export/ conn_5v: &conn_a_5v;
+
+		conn_a_i2c: conn-i2c {
+			compatible = "i2c-bus-extension";
+			i2c-parent = <&i2c1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+	};
+};

@@ -1,0 +1,51 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (C) 2026 Bootlin
+ *
+ * fdtaddon_realistic_base.dts without connector-a. Used as base for
+ * fdtaddon_overlay_export.dtso.
+ */
+
+/dts-v1/;
+
+/ {
+	conn_a_5v: regulator {
+		compatible = "regulator-fixed";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		gpios = <&gpio1 5 0>;
+	};
+
+	soc {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		i2c1: i2c@1000 {
+			compatible = "xyz,i2c-controller";
+			reg = <0x1000 0x100>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+		};
+
+		gpio1: gpio@2000 {
+			compatible = "xyz,gpio-controller";
+			reg = <0x2000 0x100>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			#address-cells = <0>; /* interrupt-map usage */
+		};
+
+		gpio2: gpio@3000 {
+			compatible = "xyz,gpio-controller";
+			reg = <0x3000 0x100>;
+			gpio-controller;
+			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			#address-cells = <0>; /* interrupt-map usage */
+		};
+	};
+};

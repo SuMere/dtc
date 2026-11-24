@@ -1,0 +1,42 @@
+/dts-v1/;
+
+/ {
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            connector-a {
+                compatible = "abc,foo-connector";
+                #address-cells = <0x00000000>;
+                #interrupt-cells = <0x00000002>;
+                interrupt-map = <0x00000000 0x00000000 0xffffffff 0x0000000a 0x00000000 0x00000000 0x00000100 0xffffffff 0x0000000a 0x00000100 0x00000001 0x00000000 0xffffffff 0x00000003 0x00000000 0x00000001 0x00000100 0xffffffff 0x00000003 0x00000100>;
+                // [FDT_REF_PHANDLE] interrupt-map[8], ref = gpio1
+                // [FDT_REF_PHANDLE] interrupt-map[28], ref = gpio1
+                // [FDT_REF_PHANDLE] interrupt-map[48], ref = gpio2
+                // [FDT_REF_PHANDLE] interrupt-map[68], ref = gpio2
+                #gpio-cells = <0x00000002>;
+                gpio-map-mask = <0x0000000f 0x00000000>;
+                gpio-map-pass-thru = <0x00000000 0x0000000f>;
+                gpio-map = <0x00000000 0x00000000 0xffffffff 0x0000000a 0x00000000 0x00000001 0x00000000 0xffffffff 0x00000003 0x00000000>;
+                // [FDT_REF_PHANDLE] gpio-map[8], ref = gpio1
+                // [FDT_REF_PHANDLE] gpio-map[28], ref = gpio2
+                phandle = <0x00000001>;
+                // [FDT_EXPORT_SYM] 'connector' -> phandle 0x00000001
+                // [FDT_EXPORT_SYM] 'conn_i2c' -> phandle 0x00000002
+                // [FDT_EXPORT_SYM_REF] 'conn_5v' -> 'conn_a_5v'
+                conn-i2c {
+                    compatible = "i2c-bus-extension";
+                    i2c-parent = <0xffffffff>;
+                    // [FDT_REF_PHANDLE] i2c-parent[0], ref = i2c1
+                    #address-cells = <0x00000001>;
+                    #size-cells = <0x00000000>;
+                    phandle = <0x00000002>;
+                };
+            };
+        };
+    };
+    __fixups__ {
+        gpio1 = "/fragment@0/__overlay__/connector-a:interrupt-map:8", "/fragment@0/__overlay__/connector-a:interrupt-map:28", "/fragment@0/__overlay__/connector-a:gpio-map:8";
+        gpio2 = "/fragment@0/__overlay__/connector-a:interrupt-map:48", "/fragment@0/__overlay__/connector-a:interrupt-map:68", "/fragment@0/__overlay__/connector-a:gpio-map:28";
+        i2c1 = "/fragment@0/__overlay__/connector-a/conn-i2c:i2c-parent:0";
+    };
+};
