@@ -30,6 +30,16 @@ int fdt_mark_property_ref_local_(void *fdt, int fdt_property,
 int fdt_add_exportsym_(void *fdt, int nodeoffset, const char *name,
 		       uint32_t phandle);
 
+int fdt_first_exportsym_offset_(const void *fdt, int node_offset);
+int fdt_next_exportsym_offset_(const void *fdt, int offset);
+const char *fdt_exportsym_get_name_(const void *fdt, int offset);
+uint32_t fdt_exportsym_get_phandle_(const void *fdt, int offset);
+
+#define fdt_for_each_exportsym_(exportsym, fdt, node)			\
+	for (exportsym = fdt_first_exportsym_offset_(fdt, node);	\
+	     exportsym >= 0;						\
+	     exportsym = fdt_next_exportsym_offset_(fdt, exportsym))
+
 const char *fdt_find_string_len_(const char *strtab, int tabsize, const char *s,
 				 int s_len);
 static inline const char *fdt_find_string_(const char *strtab, int tabsize,

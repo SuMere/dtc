@@ -362,7 +362,7 @@ static int fdt_next_exportsym_nextoffset_(const void *fdt, int nextoffset)
 	return offset;
 }
 
-static int fdt_next_exportsym_offset(const void *fdt, int offset)
+int fdt_next_exportsym_offset_(const void *fdt, int offset)
 {
 	int nextoffset;
 
@@ -395,7 +395,7 @@ static int fdt_check_node_offset_full(const void *fdt, int node_offset)
 	return nextoffset;
 }
 
-static int fdt_first_exportsym_offset(const void *fdt, int node_offset)
+int fdt_first_exportsym_offset_(const void *fdt, int node_offset)
 {
 	int nextoffset;
 
@@ -409,7 +409,7 @@ static int fdt_first_exportsym_offset(const void *fdt, int node_offset)
 	return fdt_next_exportsym_nextoffset_(fdt, nextoffset);
 }
 
-static const char *fdt_exportsym_get_name(const void *fdt, int offset)
+const char *fdt_exportsym_get_name_(const void *fdt, int offset)
 {
 	if (fdt_check_exportsym_offset(fdt, offset) < 0)
 		return NULL;
@@ -417,7 +417,7 @@ static const char *fdt_exportsym_get_name(const void *fdt, int offset)
 	return fdt_offset_ptr(fdt, offset + FDT_TAGSIZE, 1);
 }
 
-static uint32_t fdt_exportsym_get_phandle(const void *fdt, int offset)
+uint32_t fdt_exportsym_get_phandle_(const void *fdt, int offset)
 {
 	const fdt32_t *pfdt32;
 
@@ -434,11 +434,6 @@ static uint32_t fdt_exportsym_get_phandle(const void *fdt, int offset)
 
 	return fdt32_ld_(pfdt32);
 }
-
-#define fdt_for_each_exportsym(exportsym, fdt, node)			\
-	for (exportsym = fdt_first_exportsym_offset(fdt, node);		\
-	     exportsym >= 0;						\
-	     exportsym = fdt_next_exportsym_offset(fdt, exportsym))
 
 /**
  * fdt_resolve_symbol - Resolve a symbol
@@ -465,12 +460,12 @@ static int fdt_resolve_symbol(const void *fdt, int target_node,
 	int ref_node;
 
 	/* Look at export available at the target node */
-	fdt_for_each_exportsym(exportsym, fdt, target_node) {
-		exportsym_name = fdt_exportsym_get_name(fdt, exportsym);
+	fdt_for_each_exportsym_(exportsym, fdt, target_node) {
+		exportsym_name = fdt_exportsym_get_name_(fdt, exportsym);
 		if (!exportsym_name)
 			return -FDT_ERR_BADSTRUCTURE;
 
-		phandle = fdt_exportsym_get_phandle(fdt, exportsym);
+		phandle = fdt_exportsym_get_phandle_(fdt, exportsym);
 		if ((phandle == 0) || (phandle == ~0U))
 			return -FDT_ERR_BADPHANDLE;
 
@@ -1326,7 +1321,7 @@ static int fdt_add_exportsym(void *fdt, int fdt_node,
 	int exportsym;
 
 	fdt_for_each_propmarker(exportsym, fdt, fdt_node) {
-		tmp = fdt_exportsym_get_name(fdt, exportsym);
+		tmp = fdt_exportsym_get_name_(fdt, exportsym);
 		if (!tmp)
 			return -FDT_ERR_BADSTRUCTURE;
 
@@ -1446,12 +1441,12 @@ static int addon_merge_node_exports(const void *fdta, int fdta_node,
 	int exportsym;
 	int ret;
 
-	fdt_for_each_exportsym(exportsym, fdta, fdta_node) {
-		exportsym_name = fdt_exportsym_get_name(fdta, exportsym);
+	fdt_for_each_exportsym_(exportsym, fdta, fdta_node) {
+		exportsym_name = fdt_exportsym_get_name_(fdta, exportsym);
 		if (!exportsym_name)
 			return -FDT_ERR_BADSTRUCTURE;
 
-		phandle = fdt_exportsym_get_phandle(fdta, exportsym);
+		phandle = fdt_exportsym_get_phandle_(fdta, exportsym);
 		if ((phandle == 0) || (phandle == ~0U))
 			return -FDT_ERR_BADPHANDLE;
 
